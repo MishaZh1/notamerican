@@ -5,11 +5,23 @@ create extension if not exists "uuid-ossp";
 create table public.users (
   id uuid references auth.users not null primary key,
   username text unique,
+  
+  -- OAuth Profile Data
+  email text,
+  display_name text,
+  avatar_url text,
+  
+  -- Social Stats
   xp_total int default 0,
-  streak_count int default 0,
-  last_active_at timestamp with time zone default timezone('utc'::text, now()),
+  streak_current int default 0,
+  streak_best int default 0,
+  last_active_date date, -- YYYY-MM-DD
+  
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
+
+-- Index for leaderboard queries
+create index idx_users_xp_total on public.users(xp_total desc);
 
 -- QUESTIONS TABLE
 create table public.questions (
@@ -47,6 +59,10 @@ alter table public.quiz_sessions enable row level security;
 create policy "Users can read own data" on public.users
   for select using (auth.uid() = id);
 
+-- Public can read leaderboard data (limited fields)
+create policy "Public can read leaderboard" on public.users
+  for select using (true);
+
 -- Users can update their own data
 create policy "Users can update own data" on public.users
   for update using (auth.uid() = id);
@@ -72,8 +88,14 @@ create policy "Users can read own sessions" on public.quiz_sessions
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.users (id, username)
-  values (new.id, new.raw_user_meta_data->>'username');
+  insert into public.users (id, username, email, display_name, avatar_url)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'username', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    new.email,
+    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name'),
+    new.raw_user_meta_data->>'avatar_url'
+  );
   return new;
 end;
 $$ language plpgsql security definer;

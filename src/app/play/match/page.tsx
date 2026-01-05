@@ -47,6 +47,17 @@ export default function MatchPage() {
                     params.set("total", stats.total.toString())
                     params.set("time", stats.duration.toString())
 
+                    // Submit Score
+                    import("@/lib/supabase/client").then(async ({ createClient }) => {
+                        const supabase = createClient()
+                        const { data: { user } } = await supabase.auth.getUser()
+                        if (user) {
+                            import("@/app/actions-social").then(({ submitGameScore }) => {
+                                submitGameScore(user.id, stats.score)
+                            })
+                        }
+                    })
+
                     router.push(`/results?${params.toString()}`)
                 }}
             />

@@ -42,6 +42,8 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
 
     const [matchedIds, setMatchedIds] = useState<Set<string>>(new Set())
     const [wrongPair, setWrongPair] = useState<{ left: string, right: string } | null>(null)
+    const [processingMatch, setProcessingMatch] = useState(false)
+    const [fadingIds, setFadingIds] = useState<Set<string>>(new Set())
     const [score, setScore] = useState(0)
     const [matchesCount, setMatchesCount] = useState(0)
 
@@ -102,19 +104,27 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
         if (!leftTile || !rightTile) return
 
         if (leftTile.pairId === rightTile.pairId) {
-            // MATCH!
+            // MATCH! - Duolingo-style delay
+            setProcessingMatch(true)
             const newScore = score + 10
             setScore(newScore)
             const newMatches = matchesCount + 1
             setMatchesCount(newMatches)
 
+            // Add to fading set immediately for visual feedback
+            const newFadingSet = new Set(fadingIds)
+            newFadingSet.add(leftId)
+            newFadingSet.add(rightId)
+            setFadingIds(newFadingSet)
+
             setSelectedLeft(null)
             setSelectedRight(null)
 
-            // REFILL LOGIC
-            const next = getNextPair()
-            if (next) {
-                setTimeout(() => {
+            // Wait 1 second before refilling (Duolingo-style)
+            setTimeout(() => {
+                // REFILL LOGIC
+                const next = getNextPair()
+                if (next) {
                     setLeftTiles(prev => prev.map(t =>
                         t.id === leftId ? {
                             id: `l-${next.idSuffix}`,
@@ -133,29 +143,38 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
                             side: 'right'
                         } : t
                     ))
-                }, 300) // Slight delay for animation
-            } else {
-                const newSet = new Set(matchedIds)
-                newSet.add(leftId)
-                newSet.add(rightId)
-                setMatchedIds(newSet)
 
-                const activeCount = leftTiles.filter(t => !newSet.has(t.id)).length
+                    // Clear fading state
+                    setFadingIds(new Set())
+                    setProcessingMatch(false)
+                } else {
+                    // No more pairs - mark as matched
+                    const newSet = new Set(matchedIds)
+                    newSet.add(leftId)
+                    newSet.add(rightId)
+                    setMatchedIds(newSet)
+                    setFadingIds(new Set())
 
-                if (activeCount === 0) {
-                    // GAME OVER
-                    if (timerRef.current) clearInterval(timerRef.current)
-                    setTimeout(() => {
-                        onComplete({
-                            score: newScore + 50,
-                            matches: newMatches,
-                            total: pairs.length,
-                            duration: elapsed
-                        })
-                    }, 1000)
+                    const activeCount = leftTiles.filter(t => !newSet.has(t.id)).length
+
+                    if (activeCount === 0) {
+                        // GAME OVER
+                        if (timerRef.current) clearInterval(timerRef.current)
+                        setTimeout(() => {
+                            onComplete({
+                                score: newScore + 50,
+                                matches: newMatches,
+                                total: pairs.length,
+                                duration: elapsed
+                            })
+                        }, 500)
+                    } else {
+                        setProcessingMatch(false)
+                    }
                 }
-            }
+            }, 2000) // 2 second delay like Duolingo
         } else {
+            // Wrong match
             setWrongPair({ left: leftId, right: rightId })
             setTimeout(() => {
                 setWrongPair(null)
@@ -166,7 +185,9 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
     }
 
     const handleTileClick = (tile: TileData) => {
-        if (matchedIds.has(tile.id)) return
+        // Prevent clicks during processing or on matched/fading tiles
+        if (processingMatch || matchedIds.has(tile.id) || fadingIds.has(tile.id)) return
+
         if (tile.side === 'left') {
             if (selectedLeft === tile.id) setSelectedLeft(null)
             else {
@@ -187,10 +208,12 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
     const getTileClass = (tile: TileData) => {
         const isSelected = (tile.side === 'left' && selectedLeft === tile.id) || (tile.side === 'right' && selectedRight === tile.id)
         const isMatched = matchedIds.has(tile.id)
+        const isFading = fadingIds.has(tile.id)
         const isWrong = (wrongPair?.left === tile.id) || (wrongPair?.right === tile.id)
         let classes = "relative h-28 w-full rounded-2xl border-2 border-b-4 font-black flex items-center justify-center cursor-pointer transition-all active:scale-95 select-none overflow-hidden "
 
         if (isWrong) classes += "border-red-500 bg-red-100 text-red-500 animate-shake "
+        else if (isFading) classes += "border-green-400 bg-green-100 text-green-600 opacity-50 pointer-events-none "
         else if (isSelected) classes += "border-blue-400 bg-blue-100 text-blue-600 "
         else classes += "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 "
 
@@ -235,13 +258,15 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
                             className={getTileClass(tile)}
                         >
                             {tile.type === 'image' ? (
-                                <div className="relative w-full h-full p-2">
-                                    <Image
-                                        src={tile.content}
-                                        alt="flag"
-                                        fill
-                                        className="object-contain"
-                                    />
+                                <div className="relative w-full h-full p-3">
+                                    <div className="relative w-full h-full rounded-lg overflow-hidden border-2 border-slate-300 shadow-md bg-white">
+                                        <Image
+                                            src={tile.content}
+                                            alt="flag"
+                                            fill
+                                            className="object-contain p-1"
+                                        />
+                                    </div>
                                 </div>
                             ) : (
                                 <span className="text-center px-1 text-sm md:text-base leading-tight">
