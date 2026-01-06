@@ -40,8 +40,8 @@ export async function fetchFlagPairs(continent?: string): Promise<{ question: st
             pairs = pairs.filter(p => COUNTRY_CONTINENTS[p.code] === continent)
         }
 
-        // Return random 20 (or fewer if continent has less)
-        return pairs.sort(() => 0.5 - Math.random()).slice(0, 20)
+        // Return random 60 (to support 60s blitz)
+        return pairs.sort(() => 0.5 - Math.random()).slice(0, 60)
     } catch (e) {
         console.error("Error reading flags:", e)
         return []

@@ -65,24 +65,28 @@ export default function FlagsPage() {
                     key={gameKey}
                     pairs={pairs}
                     onComplete={(stats) => {
-                        const params = new URLSearchParams()
-                        params.set("score", stats.score.toString())
-                        params.set("correct", stats.matches.toString())
-                        params.set("total", stats.total.toString())
-                        params.set("time", stats.duration.toString())
-
                         // Submit Score
                         import("@/lib/supabase/client").then(async ({ createClient }) => {
                             const supabase = createClient()
                             const { data: { user } } = await supabase.auth.getUser()
-                            if (user) {
-                                import("@/app/actions-social").then(({ submitGameScore }) => {
-                                    submitGameScore(user.id, stats.score)
-                                })
-                            }
-                        })
 
-                        router.push(`/results?${params.toString()}`)
+                            // Dynamically import action to use server action from client
+                            import("@/app/actions-social").then(async ({ submitGameScore }) => {
+                                const result = await submitGameScore(
+                                    user?.id || null,
+                                    stats.score,
+                                    undefined, // No guest info yet
+                                    { correct: stats.matches, total: stats.total, duration: stats.duration }
+                                )
+
+                                const params = new URLSearchParams()
+                                params.set("score", stats.score.toString())
+                                params.set("correct", stats.matches.toString())
+                                if (result?.sessionId) params.set("sessionId", result.sessionId)
+
+                                router.push(`/results?${params.toString()}`)
+                            })
+                        })
                     }}
                 />
             )}

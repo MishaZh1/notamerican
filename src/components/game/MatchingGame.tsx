@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { Loader2, Timer as TimerIcon } from "lucide-react"
@@ -52,20 +52,22 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
     const [matchesCount, setMatchesCount] = useState(0)
 
     const [queueIndex, setQueueIndex] = useState(0)
-    const BATCH_SIZE = 5
+    const BATCH_SIZE_ACTUAL = 5
 
     // Timer
+    const TIME_LIMIT = 60
     const [startTime, setStartTime] = useState<number | null>(null)
     const [elapsed, setElapsed] = useState(0)
+    const [isGameOver, setIsGameOver] = useState(false)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
 
     // Initialize
     useEffect(() => {
         if (pairs.length === 0) return
 
-        // Take first 5
-        const batch = pairs.slice(0, BATCH_SIZE)
-        setQueueIndex(BATCH_SIZE)
+        // Take first batch
+        const batch = pairs.slice(0, BATCH_SIZE_ACTUAL)
+        setQueueIndex(BATCH_SIZE_ACTUAL)
 
         const lefts: TileData[] = batch.map((p, i) => ({
             id: `l-${i}`, content: p.question, type: 'text', pairId: `p-${i}`, side: 'left'
@@ -87,13 +89,43 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
     }, [pairs])
 
     useEffect(() => {
-        if (startTime) {
+        if (startTime && !isGameOver) {
             timerRef.current = setInterval(() => {
-                setElapsed(Math.floor((Date.now() - startTime) / 1000))
-            }, 1000)
+                const now = Date.now()
+                const diff = Math.floor((now - startTime) / 1000)
+                setElapsed(diff)
+
+                if (diff >= TIME_LIMIT) {
+                    // TIME IS UP!
+                    handleGameOver()
+                }
+            }, 100)
         }
         return () => { if (timerRef.current) clearInterval(timerRef.current) }
-    }, [startTime])
+    }, [startTime, isGameOver])
+
+    // Handle Game Over
+    const handleGameOver = useCallback(() => {
+        setIsGameOver(true)
+        if (timerRef.current) clearInterval(timerRef.current)
+
+        // Wait a small moment then call complete
+        setTimeout(() => {
+            onComplete({
+                score: score, // Pass current score state 
+                matches: matchesCount, // Pass current matches count
+                total: pairs.length,
+                duration: TIME_LIMIT
+            })
+        }, 500)
+    }, [onComplete, score, matchesCount, pairs.length])
+
+    useEffect(() => {
+        if (elapsed >= TIME_LIMIT && !isGameOver) {
+            handleGameOver()
+        }
+    }, [elapsed, isGameOver, handleGameOver])
+
 
     const getNextPair = () => {
         if (queueIndex >= pairs.length) return null
@@ -108,17 +140,13 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
         if (!leftTile || !rightTile) return
 
         if (leftTile.pairId === rightTile.pairId) {
-            // MATCH! - Duolingo-style Sequence
-
-            // 1. Lock interaction
+            // MATCH!
             setProcessingMatch(true)
 
-            // 2. Immediate Success Updates
-            const newScore = score + 10
-            setScore(newScore)
-            setMatchesCount(prev => prev + 1)
+            // Immediate Success Updates
+            setScore(s => s + 10)
+            setMatchesCount(m => m + 1)
 
-            // 3. Green Phase (Immediate)
             const newFadingSet = new Set(fadingIds)
             newFadingSet.add(leftId)
             newFadingSet.add(rightId)
@@ -127,15 +155,15 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
             setSelectedLeft(null)
             setSelectedRight(null)
 
-            // 4. Wait 1 second on Green... then Fade Out
             setTimeout(() => {
                 const newExitingSet = new Set(exitingIds)
                 newExitingSet.add(leftId)
                 newExitingSet.add(rightId)
                 setExitingIds(newExitingSet)
 
-                // 5. Wait 0.5s for fade out... then Refill
                 setTimeout(() => {
+                    if (isGameOver) return // Don't refill if game ended
+
                     const next = getNextPair()
                     if (next) {
                         setLeftTiles(prev => prev.map(t =>
@@ -157,38 +185,22 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
                             } : t
                         ))
 
-                        // Clear Animation States
                         setFadingIds(new Set())
                         setExitingIds(new Set())
                         setProcessingMatch(false)
                     } else {
-                        // No more pairs - mark as matched (disappear)
+                        // Empty Spots Logic (Just hide them)
                         const newSet = new Set(matchedIds)
                         newSet.add(leftId)
                         newSet.add(rightId)
                         setMatchedIds(newSet)
                         setFadingIds(new Set())
                         setExitingIds(new Set())
-
-                        const activeCount = leftTiles.filter(t => !newSet.has(t.id)).length
-
-                        if (activeCount === 0) {
-                            // GAME OVER
-                            if (timerRef.current) clearInterval(timerRef.current)
-                            setTimeout(() => {
-                                onComplete({
-                                    score: newScore + 50,
-                                    matches: matchesCount + 1,
-                                    total: pairs.length,
-                                    duration: elapsed
-                                })
-                            }, 500)
-                        } else {
-                            setProcessingMatch(false)
-                        }
+                        setProcessingMatch(false)
+                        // DO NOT Trigger Auto-End. Wait for timer.
                     }
-                }, 500) // 0.5s fade out time
-            }, 1000) // 1s green time
+                }, 500)
+            }, 1000)
         } else {
             // Wrong match
             setWrongPair({ left: leftId, right: rightId })
@@ -202,7 +214,7 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
 
     const handleTileClick = (tile: TileData) => {
         // Prevent clicks during processing
-        if (processingMatch || matchedIds.has(tile.id) || fadingIds.has(tile.id) || exitingIds.has(tile.id)) return
+        if (isGameOver || processingMatch || matchedIds.has(tile.id) || fadingIds.has(tile.id) || exitingIds.has(tile.id)) return
 
         if (tile.side === 'left') {
             if (selectedLeft === tile.id) setSelectedLeft(null)
@@ -262,15 +274,27 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
         }
     }
 
+    const progressPercent = Math.max(0, (1 - (elapsed / TIME_LIMIT)) * 100)
+
     return (
         <div className="flex flex-col gap-4 w-full max-w-lg mx-auto">
-            {/* Header / Stats */}
-            <div className="flex justify-between items-center px-2 text-slate-500 font-bold">
-                <div className="flex items-center gap-2">
-                    <TimerIcon className="w-5 h-5" />
-                    <span>{elapsed}s</span>
+            {/* Timeline Bar */}
+            <div className="px-2 w-full">
+                <div className="flex justify-between text-xs text-slate-400 font-bold mb-1">
+                    <span>{Math.max(0, TIME_LIMIT - elapsed)}s</span>
+                    <span>Blitz Mode</span>
                 </div>
-                <div>{matchesCount} / {pairs.length}</div>
+                <div className="h-4 bg-slate-100 rounded-full overflow-hidden border border-slate-200 shadow-inner">
+                    <div
+                        className="h-full bg-green-500 transition-all duration-1000 ease-linear"
+                        style={{ width: `${progressPercent}%` }}
+                    />
+                </div>
+            </div>
+
+            {/* Stats (Score Only) */}
+            <div className="text-center font-black text-2xl text-slate-700">
+                {matchesCount} Matches
             </div>
 
             <div className="flex gap-4 w-full">
