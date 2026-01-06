@@ -45,6 +45,8 @@ create table public.quiz_sessions (
   score int default 0,
   correct_count int default 0,
   duration_ms int default 0,
+  guest_name text,
+  guest_email text,
   answers_log jsonb default '[]'::jsonb, 
   started_at timestamp with time zone default timezone('utc'::text, now()),
   ended_at timestamp with time zone
