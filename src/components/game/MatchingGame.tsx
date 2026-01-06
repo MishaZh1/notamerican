@@ -43,7 +43,11 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
     const [matchedIds, setMatchedIds] = useState<Set<string>>(new Set())
     const [wrongPair, setWrongPair] = useState<{ left: string, right: string } | null>(null)
     const [processingMatch, setProcessingMatch] = useState(false)
-    const [fadingIds, setFadingIds] = useState<Set<string>>(new Set())
+
+    // Animation States
+    const [fadingIds, setFadingIds] = useState<Set<string>>(new Set()) // Green phase
+    const [exitingIds, setExitingIds] = useState<Set<string>>(new Set()) // Fade out phase
+
     const [score, setScore] = useState(0)
     const [matchesCount, setMatchesCount] = useState(0)
 
@@ -104,14 +108,17 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
         if (!leftTile || !rightTile) return
 
         if (leftTile.pairId === rightTile.pairId) {
-            // MATCH! - Duolingo-style delay
+            // MATCH! - Duolingo-style Sequence
+
+            // 1. Lock interaction
             setProcessingMatch(true)
+
+            // 2. Immediate Success Updates
             const newScore = score + 10
             setScore(newScore)
-            const newMatches = matchesCount + 1
-            setMatchesCount(newMatches)
+            setMatchesCount(prev => prev + 1)
 
-            // Add to fading set immediately for visual feedback
+            // 3. Green Phase (Immediate)
             const newFadingSet = new Set(fadingIds)
             newFadingSet.add(leftId)
             newFadingSet.add(rightId)
@@ -120,59 +127,68 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
             setSelectedLeft(null)
             setSelectedRight(null)
 
-            // Wait 1 second before refilling (Duolingo-style)
+            // 4. Wait 1 second on Green... then Fade Out
             setTimeout(() => {
-                // REFILL LOGIC
-                const next = getNextPair()
-                if (next) {
-                    setLeftTiles(prev => prev.map(t =>
-                        t.id === leftId ? {
-                            id: `l-${next.idSuffix}`,
-                            content: next.pair.question,
-                            type: 'text',
-                            pairId: `p-${next.idSuffix}`,
-                            side: 'left'
-                        } : t
-                    ))
-                    setRightTiles(prev => prev.map(t =>
-                        t.id === rightId ? {
-                            id: `r-${next.idSuffix}`,
-                            content: next.pair.answer,
-                            type: next.pair.type === 'flag' ? 'image' : 'text',
-                            pairId: `p-${next.idSuffix}`,
-                            side: 'right'
-                        } : t
-                    ))
+                const newExitingSet = new Set(exitingIds)
+                newExitingSet.add(leftId)
+                newExitingSet.add(rightId)
+                setExitingIds(newExitingSet)
 
-                    // Clear fading state
-                    setFadingIds(new Set())
-                    setProcessingMatch(false)
-                } else {
-                    // No more pairs - mark as matched
-                    const newSet = new Set(matchedIds)
-                    newSet.add(leftId)
-                    newSet.add(rightId)
-                    setMatchedIds(newSet)
-                    setFadingIds(new Set())
+                // 5. Wait 0.5s for fade out... then Refill
+                setTimeout(() => {
+                    const next = getNextPair()
+                    if (next) {
+                        setLeftTiles(prev => prev.map(t =>
+                            t.id === leftId ? {
+                                id: `l-${next.idSuffix}`,
+                                content: next.pair.question,
+                                type: 'text',
+                                pairId: `p-${next.idSuffix}`,
+                                side: 'left'
+                            } : t
+                        ))
+                        setRightTiles(prev => prev.map(t =>
+                            t.id === rightId ? {
+                                id: `r-${next.idSuffix}`,
+                                content: next.pair.answer,
+                                type: next.pair.type === 'flag' ? 'image' : 'text',
+                                pairId: `p-${next.idSuffix}`,
+                                side: 'right'
+                            } : t
+                        ))
 
-                    const activeCount = leftTiles.filter(t => !newSet.has(t.id)).length
-
-                    if (activeCount === 0) {
-                        // GAME OVER
-                        if (timerRef.current) clearInterval(timerRef.current)
-                        setTimeout(() => {
-                            onComplete({
-                                score: newScore + 50,
-                                matches: newMatches,
-                                total: pairs.length,
-                                duration: elapsed
-                            })
-                        }, 500)
-                    } else {
+                        // Clear Animation States
+                        setFadingIds(new Set())
+                        setExitingIds(new Set())
                         setProcessingMatch(false)
+                    } else {
+                        // No more pairs - mark as matched (disappear)
+                        const newSet = new Set(matchedIds)
+                        newSet.add(leftId)
+                        newSet.add(rightId)
+                        setMatchedIds(newSet)
+                        setFadingIds(new Set())
+                        setExitingIds(new Set())
+
+                        const activeCount = leftTiles.filter(t => !newSet.has(t.id)).length
+
+                        if (activeCount === 0) {
+                            // GAME OVER
+                            if (timerRef.current) clearInterval(timerRef.current)
+                            setTimeout(() => {
+                                onComplete({
+                                    score: newScore + 50,
+                                    matches: matchesCount + 1,
+                                    total: pairs.length,
+                                    duration: elapsed
+                                })
+                            }, 500)
+                        } else {
+                            setProcessingMatch(false)
+                        }
                     }
-                }
-            }, 2000) // 2 second delay like Duolingo
+                }, 500) // 0.5s fade out time
+            }, 1000) // 1s green time
         } else {
             // Wrong match
             setWrongPair({ left: leftId, right: rightId })
@@ -185,8 +201,8 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
     }
 
     const handleTileClick = (tile: TileData) => {
-        // Prevent clicks during processing or on matched/fading tiles
-        if (processingMatch || matchedIds.has(tile.id) || fadingIds.has(tile.id)) return
+        // Prevent clicks during processing
+        if (processingMatch || matchedIds.has(tile.id) || fadingIds.has(tile.id) || exitingIds.has(tile.id)) return
 
         if (tile.side === 'left') {
             if (selectedLeft === tile.id) setSelectedLeft(null)
@@ -208,18 +224,42 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
     const getTileClass = (tile: TileData) => {
         const isSelected = (tile.side === 'left' && selectedLeft === tile.id) || (tile.side === 'right' && selectedRight === tile.id)
         const isMatched = matchedIds.has(tile.id)
-        const isFading = fadingIds.has(tile.id)
+        const isFading = fadingIds.has(tile.id) // Green phase
+        const isExiting = exitingIds.has(tile.id) // Fade out phase
         const isWrong = (wrongPair?.left === tile.id) || (wrongPair?.right === tile.id)
-        let classes = "relative h-28 w-full rounded-2xl border-2 border-b-4 font-black flex items-center justify-center cursor-pointer transition-all active:scale-95 select-none overflow-hidden "
+
+        let classes = "relative h-28 w-full rounded-2xl border-2 border-b-4 font-black flex items-center justify-center cursor-pointer transition-colors select-none overflow-hidden "
 
         if (isWrong) classes += "border-red-500 bg-red-100 text-red-500 animate-shake "
-        else if (isFading) classes += "border-green-400 bg-green-100 text-green-600 opacity-50 pointer-events-none "
+        else if (isFading || isExiting) classes += "border-green-500 bg-green-100 text-green-600 " // Keep Green during fade out
         else if (isSelected) classes += "border-blue-400 bg-blue-100 text-blue-600 "
-        else classes += "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 "
+        else classes += "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 active:scale-95 "
 
         if (isMatched) classes += "opacity-0 pointer-events-none "
 
         return cn(classes)
+    }
+
+    const getAnimationProps = (tile: TileData) => {
+        if (exitingIds.has(tile.id)) {
+            return {
+                initial: { opacity: 1, scale: 1 },
+                animate: { opacity: 0, scale: 0.8 },
+                transition: { duration: 0.4 }
+            }
+        }
+        if (fadingIds.has(tile.id)) {
+            return {
+                animate: { scale: 1.05 },
+                transition: { type: "spring" as const, stiffness: 300, damping: 20 }
+            }
+        }
+        // Entering (New tile)
+        return {
+            initial: { opacity: 0, scale: 0.5 },
+            animate: { opacity: 1, scale: 1 },
+            transition: { type: "spring" as const, stiffness: 300, damping: 25 }
+        }
     }
 
     return (
@@ -238,9 +278,11 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
                 <div className="flex-1 flex flex-col gap-3">
                     {leftTiles.map(tile => (
                         <motion.div
-                            key={tile.id} layout
+                            key={tile.id}
+                            layout
                             onClick={() => handleTileClick(tile)}
                             className={getTileClass(tile)}
+                            {...getAnimationProps(tile)}
                         >
                             <span className="text-center px-1 text-sm md:text-base leading-tight">
                                 {tile.content}
@@ -253,9 +295,11 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
                 <div className="flex-1 flex flex-col gap-3">
                     {rightTiles.map(tile => (
                         <motion.div
-                            key={tile.id} layout
+                            key={tile.id}
+                            layout
                             onClick={() => handleTileClick(tile)}
                             className={getTileClass(tile)}
+                            {...getAnimationProps(tile)}
                         >
                             {tile.type === 'image' ? (
                                 <div className="relative w-full h-full p-3">
