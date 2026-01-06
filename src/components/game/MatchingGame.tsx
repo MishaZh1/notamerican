@@ -51,6 +51,11 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
     const [score, setScore] = useState(0)
     const [matchesCount, setMatchesCount] = useState(0)
 
+    // Refs for safe access in timer/callbacks
+    const scoreRef = useRef(0)
+    const matchesRef = useRef(0)
+    const lastMatchTimeRef = useRef<number>(Date.now())
+
     const [queueIndex, setQueueIndex] = useState(0)
     const BATCH_SIZE_ACTUAL = 5
 
@@ -85,7 +90,9 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
         setLeftTiles(lefts)
 
         // Start Timer
-        setStartTime(Date.now())
+        const now = Date.now()
+        setStartTime(now)
+        lastMatchTimeRef.current = now // Reset match timer
     }, [pairs])
 
     useEffect(() => {
@@ -112,13 +119,13 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
         // Wait a small moment then call complete
         setTimeout(() => {
             onComplete({
-                score: score, // Pass current score state 
-                matches: matchesCount, // Pass current matches count
+                score: scoreRef.current, // Use Ref to avoid stale closure
+                matches: matchesRef.current,
                 total: pairs.length,
                 duration: TIME_LIMIT
             })
         }, 500)
-    }, [onComplete, score, matchesCount, pairs.length])
+    }, [onComplete, pairs.length])
 
     useEffect(() => {
         if (elapsed >= TIME_LIMIT && !isGameOver) {
@@ -143,9 +150,28 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
             // MATCH!
             setProcessingMatch(true)
 
-            // Immediate Success Updates
-            setScore(s => s + 10)
-            setMatchesCount(m => m + 1)
+            // --- Dynamic Scoring Logic ---
+            const now = Date.now()
+            const timeSinceLast = (now - lastMatchTimeRef.current) / 1000 // seconds
+            lastMatchTimeRef.current = now // Reset for next match
+
+            // 100 pts if < 2s, decays to 10 pts over 10s
+            // Formula: Max 100, Min 10. Loss of ~10 pts per sec after 1st sec?
+            // Let's try: Base 100 - (Time * 8).
+            let points = Math.max(10, Math.round(100 - (timeSinceLast * 8)))
+            if (timeSinceLast < 1.5) points = 100 // Speed bonus for instant
+
+            // Update State & Refs
+            setScore(s => {
+                const newScore = s + points
+                scoreRef.current = newScore
+                return newScore
+            })
+            setMatchesCount(m => {
+                const newCount = m + 1
+                matchesRef.current = newCount
+                return newCount
+            })
 
             const newFadingSet = new Set(fadingIds)
             newFadingSet.add(leftId)

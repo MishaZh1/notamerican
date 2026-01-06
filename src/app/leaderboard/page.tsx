@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { fetchLeaderboard, UserProfile } from "@/app/actions-social"
+import { fetchLeaderboard, LeaderboardEntry } from "@/app/actions-social"
 import { Button } from "@/components/ui/button"
 import { Loader2, Trophy, ArrowLeft, Flame } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -13,7 +13,7 @@ import { useAuth } from "@/contexts/auth-context"
 export default function LeaderboardPage() {
     const router = useRouter()
     const { user } = useAuth()
-    const [users, setUsers] = useState<UserProfile[]>([])
+    const [users, setUsers] = useState<LeaderboardEntry[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -46,8 +46,8 @@ export default function LeaderboardPage() {
                     <div className="flex justify-center items-end gap-4 py-8 mb-4">
                         {/* 2nd Place */}
                         <div className="flex flex-col items-center">
-                            <UserAvatar src={users[1].avatar_url} name={users[1].display_name || users[1].username} size="md" className="mb-2" />
-                            <div className="text-slate-500 font-bold mb-1 text-sm">{users[1].display_name || users[1].username}</div>
+                            <UserAvatar src={users[1].avatar_url} name={users[1].name} size="md" className="mb-2" />
+                            <div className="text-slate-500 font-bold mb-1 text-sm text-center line-clamp-1 max-w-[80px]">{users[1].name}</div>
                             <div className="w-20 h-24 bg-slate-200 rounded-t-lg border-x-4 border-t-4 border-slate-300 flex items-center justify-center text-2xl font-black text-slate-400">
                                 2
                             </div>
@@ -55,16 +55,16 @@ export default function LeaderboardPage() {
                         {/* 1st Place */}
                         <div className="flex flex-col items-center">
                             <Trophy className="w-8 h-8 text-yellow-500 mb-2 animate-bounce" />
-                            <UserAvatar src={users[0].avatar_url} name={users[0].display_name || users[0].username} size="lg" className="mb-2" />
-                            <div className="text-slate-700 font-bold mb-1 text-sm">{users[0].display_name || users[0].username}</div>
+                            <UserAvatar src={users[0].avatar_url} name={users[0].name} size="lg" className="mb-2" />
+                            <div className="text-slate-700 font-bold mb-1 text-sm text-center line-clamp-1 max-w-[80px]">{users[0].name}</div>
                             <div className="w-24 h-32 bg-yellow-100 rounded-t-lg border-x-4 border-t-4 border-yellow-300 flex items-center justify-center text-4xl font-black text-yellow-600">
                                 1
                             </div>
                         </div>
                         {/* 3rd Place */}
                         <div className="flex flex-col items-center">
-                            <UserAvatar src={users[2].avatar_url} name={users[2].display_name || users[2].username} size="md" className="mb-2" />
-                            <div className="text-slate-500 font-bold mb-1 text-sm">{users[2].display_name || users[2].username}</div>
+                            <UserAvatar src={users[2].avatar_url} name={users[2].name} size="md" className="mb-2" />
+                            <div className="text-slate-500 font-bold mb-1 text-sm text-center line-clamp-1 max-w-[80px]">{users[2].name}</div>
                             <div className="w-20 h-20 bg-orange-100 rounded-t-lg border-x-4 border-t-4 border-orange-200 flex items-center justify-center text-2xl font-black text-orange-400">
                                 3
                             </div>
@@ -74,11 +74,13 @@ export default function LeaderboardPage() {
 
                 {/* List View */}
                 <div className="space-y-2">
-                    {users.map((userItem, index) => (
-                        <Card key={userItem.id} className={cn(
+                    {users.map((entry, index) => (
+                        <Card key={entry.id} className={cn(
                             "border-2 hover:bg-slate-50 transition-colors",
                             index < 3 ? "border-yellow-400 bg-yellow-50" : "border-slate-200",
-                            user?.id === userItem.id && "ring-2 ring-primary ring-offset-2"
+                            // Highlight if it's the current user (if logged in)
+                            // Note: For guest sessions we can't easily highlight "you" unless we track session ID locally
+                            user && !entry.is_guest && user.id === entry.id && "ring-2 ring-primary ring-offset-2"
                         )}>
                             <CardContent className="p-4 flex items-center gap-4">
                                 <div className={cn(
@@ -87,20 +89,19 @@ export default function LeaderboardPage() {
                                 )}>
                                     {index + 1}
                                 </div>
-                                <UserAvatar src={userItem.avatar_url} name={userItem.display_name || userItem.username} size="sm" />
+                                <UserAvatar src={entry.avatar_url} name={entry.name} size="sm" />
                                 <div className="flex-1">
                                     <div className="font-bold text-slate-700">
-                                        {userItem.display_name || userItem.username}
-                                        {user?.id === userItem.id && <span className="ml-2 text-primary text-xs">(You)</span>}
+                                        {entry.name}
+                                        {entry.is_guest && <span className="ml-2 text-xs text-slate-400 uppercase tracking-wider border px-1 rounded">Guest</span>}
                                     </div>
-                                    <div className="text-xs text-slate-400 font-bold uppercase">{userItem.xp_total} XP</div>
+                                    <div className="text-xs text-slate-400 font-bold uppercase">
+                                        {new Date(entry.date).toLocaleDateString()}
+                                    </div>
                                 </div>
-                                {userItem.streak_current > 0 && (
-                                    <div className="flex items-center gap-1 text-orange-500 font-bold">
-                                        <Flame className="w-4 h-4 fill-current" />
-                                        {userItem.streak_current}
-                                    </div>
-                                )}
+                                <div className="text-xl font-black text-primary">
+                                    {entry.score} <span className="text-xs text-muted-foreground font-bold uppercase">PTS</span>
+                                </div>
                             </CardContent>
                         </Card>
                     ))}

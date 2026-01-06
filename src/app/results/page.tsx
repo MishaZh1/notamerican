@@ -43,9 +43,15 @@ function ResultsContent() {
         if (!sessionId || !guestName) return
 
         setIsSubmitting(true)
-        await registerGuest(sessionId, guestName, guestEmail)
-        setIsSubmitting(false)
-        setIsSaved(true)
+        try {
+            await registerGuest(sessionId, guestName, guestEmail)
+            setIsSaved(true)
+        } catch (error) {
+            console.error(error)
+            alert("Failed to save score. Please try again.")
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     return (

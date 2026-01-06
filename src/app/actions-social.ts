@@ -13,22 +13,54 @@ export interface UserProfile {
     avatar_url?: string
 }
 
-export async function fetchLeaderboard(): Promise<UserProfile[]> {
+// Defines a leaderboard entry
+export interface LeaderboardEntry {
+    id: string
+    rank: number
+    name: string
+    score: number
+    avatar_url?: string
+    is_guest: boolean
+    date: string
+}
+
+export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
     const supabase = getAdminSupabase()
 
-    // Sort by XP
-    const { data } = await supabase
-        .from("users")
-        .select("id, username, display_name, avatar_url, xp_total, streak_current, streak_best")
-        .order("xp_total", { ascending: false })
+    // Query top 50 scores from quiz_sessions, joining with users to get avatar/name
+    // Note: Supabase JS select with joined tables
+    const { data: sessions } = await supabase
+        .from("quiz_sessions")
+        .select(`
+            id,
+            score,
+            guest_name,
+            ended_at,
+            user:users (
+                username,
+                display_name,
+                avatar_url
+            )
+        `)
+        .order("score", { ascending: false })
         .limit(50)
 
-    if (!data) return []
+    if (!sessions) return []
 
-    return data.map(u => ({
-        ...u,
-        username: u.username || "Anonymous"
-    })) as UserProfile[]
+    return sessions.map((s: any, index: number) => {
+        const isGuest = !s.user
+        const name = isGuest ? (s.guest_name || "Anonymous Guest") : (s.user.display_name || s.user.username || "Anonymous User")
+
+        return {
+            id: s.id,
+            rank: index + 1,
+            name: name,
+            score: s.score || 0,
+            avatar_url: s.user?.avatar_url,
+            is_guest: isGuest,
+            date: s.ended_at
+        }
+    })
 }
 
 // Securely submit score
@@ -110,10 +142,16 @@ export async function submitGameScore(
 export async function registerGuest(sessionId: string, name: string, email?: string) {
     const supabase = getAdminSupabase()
 
-    await supabase.from("quiz_sessions").update({
+    const { error } = await supabase.from("quiz_sessions").update({
         guest_name: name,
         guest_email: email
     }).eq("id", sessionId)
 
+    if (error) {
+        console.error("Error registering guest:", error)
+        throw new Error(error.message)
+    }
+
+    revalidatePath("/leaderboard")
     return { success: true }
 }
