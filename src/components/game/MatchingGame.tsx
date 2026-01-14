@@ -29,10 +29,12 @@ interface GameStats {
 
 interface MatchingGameProps {
     pairs: { question: string, answer: string, type?: 'text' | 'flag' }[]
+    passports?: number
+    onWrongMatch?: () => void
     onComplete: (stats: GameStats) => void
 }
 
-export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
+export function MatchingGame({ pairs, passports, onWrongMatch, onComplete }: MatchingGameProps) {
     const [leftTiles, setLeftTiles] = useState<TileData[]>([])
     const [rightTiles, setRightTiles] = useState<TileData[]>([])
 
@@ -225,10 +227,11 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
                         setProcessingMatch(false)
                         // DO NOT Trigger Auto-End. Wait for timer.
                     }
-                }, 500)
-            }, 1000)
+                }, 200) // Reduced from 500
+            }, 500) // Reduced from 1000
         } else {
             // Wrong match
+            if (onWrongMatch) onWrongMatch() // Deduct passport
             setWrongPair({ left: leftId, right: rightId })
             setTimeout(() => {
                 setWrongPair(null)
@@ -239,8 +242,8 @@ export function MatchingGame({ pairs, onComplete }: MatchingGameProps) {
     }
 
     const handleTileClick = (tile: TileData) => {
-        // Prevent clicks during processing
-        if (isGameOver || processingMatch || matchedIds.has(tile.id) || fadingIds.has(tile.id) || exitingIds.has(tile.id)) return
+        // Prevent clicks on already matched or processing tiles ONLY
+        if (isGameOver || matchedIds.has(tile.id) || fadingIds.has(tile.id) || exitingIds.has(tile.id)) return
 
         if (tile.side === 'left') {
             if (selectedLeft === tile.id) setSelectedLeft(null)

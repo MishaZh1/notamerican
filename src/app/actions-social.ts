@@ -155,3 +155,24 @@ export async function registerGuest(sessionId: string, name: string, email?: str
     revalidatePath("/leaderboard")
     return { success: true }
 }
+
+export async function fetchUserStamps(userId: string): Promise<string[]> {
+    const supabase = getAdminSupabase()
+    const { data } = await supabase.from("user_stamps").select("category").eq("user_id", userId)
+    if (!data) return []
+    return data.map(s => s.category)
+}
+
+export async function unlockStamp(userId: string, category: string) {
+    const supabase = getAdminSupabase()
+    const { error } = await supabase.from("user_stamps").upsert({
+        user_id: userId,
+        category: category
+    }, { onConflict: 'user_id,category' })
+
+    if (error) {
+        console.error("Error unlocking stamp:", error)
+        return { error: error.message }
+    }
+    return { success: true }
+}

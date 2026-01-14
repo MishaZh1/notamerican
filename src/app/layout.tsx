@@ -1,12 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Outfit } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/contexts/auth-context";
 
-const inter = Inter({ subsets: ["latin"] });
+const outfit = Outfit({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "NotaMerican",
+  title: "NOTA MERICAN",
   description: "Addictive educational ranking quiz",
   manifest: "/manifest.json",
   icons: {
@@ -29,10 +28,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen bg-background text-foreground antialiased`}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+      <body
+        className={`${outfit.className} min-h-screen bg-background text-foreground antialiased`}
+        suppressHydrationWarning
+      >
+        {children}
       </body>
     </html>
   );

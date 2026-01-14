@@ -15,6 +15,7 @@ export default function FlagsPage() {
     const [loading, setLoading] = useState(true)
     const [selectedContinent, setSelectedContinent] = useState("All")
     const [gameKey, setGameKey] = useState(0) // Used to reset the game component
+    const [passports, setPassports] = useState(5) // Passport system
 
     const load = useCallback(async (continent: string) => {
         setLoading(true)
@@ -22,18 +23,36 @@ export default function FlagsPage() {
         setPairs(data)
         setLoading(false)
         setGameKey(prev => prev + 1)
+        setPassports(5) // Reset passports on new game
     }, [])
 
     useEffect(() => {
         load(selectedContinent)
     }, [selectedContinent, load])
 
+    const handleWrongMatch = () => {
+        setPassports(prev => {
+            const newPassports = Math.max(0, prev - 1)
+            if (newPassports === 0) {
+                // Game over - redirect to results
+                setTimeout(() => {
+                    router.push('/results?score=0&correct=0&out=true')
+                }, 1000)
+            }
+            return newPassports
+        })
+    }
+
     return (
         <main className="min-h-screen p-4 bg-background flex flex-col">
             <div className="flex justify-between items-center mb-4">
                 <Button variant="ghost" size="sm" onClick={() => router.push('/')}>Quit</Button>
                 <h1 className="font-black text-xl text-primary">Flags</h1>
-                <div className="w-10" />
+                {/* Passports Display */}
+                <div className="flex items-center gap-1 text-slate-700 font-black">
+                    <span className="text-lg">🛂</span>
+                    <span className="text-lg">{passports}</span>
+                </div>
             </div>
 
             {/* Continent Selector - Mobile Optimized */}
@@ -64,6 +83,8 @@ export default function FlagsPage() {
                 <MatchingGame
                     key={gameKey}
                     pairs={pairs}
+                    passports={passports}
+                    onWrongMatch={handleWrongMatch}
                     onComplete={(stats) => {
                         // Submit Score
                         import("@/lib/supabase/client").then(async ({ createClient }) => {

@@ -8,11 +8,11 @@ import { Loader2, Trophy, ArrowLeft, Flame } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { UserAvatar } from "@/components/ui/UserAvatar"
-import { useAuth } from "@/contexts/auth-context"
+
 
 export default function LeaderboardPage() {
     const router = useRouter()
-    const { user } = useAuth()
+
     const [users, setUsers] = useState<LeaderboardEntry[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -80,7 +80,7 @@ export default function LeaderboardPage() {
                             index < 3 ? "border-yellow-400 bg-yellow-50" : "border-slate-200",
                             // Highlight if it's the current user (if logged in)
                             // Note: For guest sessions we can't easily highlight "you" unless we track session ID locally
-                            user && !entry.is_guest && user.id === entry.id && "ring-2 ring-primary ring-offset-2"
+                            // user && !entry.is_guest && user.id === entry.id && "ring-2 ring-primary ring-offset-2"
                         )}>
                             <CardContent className="p-4 flex items-center gap-4">
                                 <div className={cn(
