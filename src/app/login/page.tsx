@@ -141,7 +141,7 @@ export default function LoginPage() {
                                         await supabase.auth.signInWithOAuth({
                                             provider: 'google',
                                             options: {
-                                                redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`
+                                                redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback?next=/dashboard`
                                             }
                                         })
                                     })
@@ -160,7 +160,7 @@ export default function LoginPage() {
                                         await supabase.auth.signInWithOAuth({
                                             provider: 'facebook',
                                             options: {
-                                                redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`
+                                                redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback?next=/dashboard`
                                             }
                                         })
                                     })
@@ -179,7 +179,7 @@ export default function LoginPage() {
                                         await supabase.auth.signInWithOAuth({
                                             provider: 'apple',
                                             options: {
-                                                redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`
+                                                redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback?next=/dashboard`
                                             }
                                         })
                                     })
