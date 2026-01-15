@@ -1,8 +1,24 @@
-import { type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
-    return await updateSession(request)
+    const { response, user } = await updateSession(request)
+
+    // Protected routes: redirect to login if not authenticated
+    if (request.nextUrl.pathname.startsWith('/dashboard') || request.nextUrl.pathname.startsWith('/settings')) {
+        if (!user) {
+            return NextResponse.redirect(new URL('/login', request.url))
+        }
+    }
+
+    // Auth routes: redirect to dashboard if already authenticated
+    if (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/signup')) {
+        if (user) {
+            return NextResponse.redirect(new URL('/dashboard', request.url))
+        }
+    }
+
+    return response
 }
 
 export const config = {
