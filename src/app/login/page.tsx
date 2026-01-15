@@ -5,7 +5,7 @@ import { login, signup } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Label } from '@/components/ui/label' // Assuming Label exists, if not I'll use standard label
+
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { Loader2, ArrowLeft } from 'lucide-react'
