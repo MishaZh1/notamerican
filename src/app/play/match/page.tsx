@@ -40,11 +40,23 @@ export default function MatchPage() {
         setGameKey(prev => prev + 1)
     }, [selectedContinent]) // Re-run when continent changes
 
+    const [hearts, setHearts] = useState(3) // Start with 3 hearts for Match
+
+    useEffect(() => {
+        // Reset hearts when game resets
+        setHearts(3)
+    }, [gameKey])
+
     return (
         <main className="min-h-screen p-4 bg-background flex flex-col">
             <div className="flex justify-between items-center mb-4">
                 <Button variant="ghost" onClick={() => router.push('/')}>Quit</Button>
-                <h1 className="font-bold text-xl text-primary">Match Madness</h1>
+                <div className="flex flex-col items-center">
+                    <h1 className="font-bold text-xl text-primary">Match Madness</h1>
+                    <div className="text-rose-500 font-black animate-pulse">
+                        {"❤️".repeat(hearts)}
+                    </div>
+                </div>
                 <div className="w-10" />
             </div>
 
@@ -76,28 +88,46 @@ export default function MatchPage() {
                 <MatchingGame
                     key={gameKey}
                     pairs={pairs}
+                    passports={hearts}
+                    onWrongMatch={() => {
+                        setHearts(prev => Math.max(0, prev - 1))
+                    }}
                     onComplete={(stats) => {
-                        const params = new URLSearchParams()
-                        params.set("score", stats.score.toString())
-                        params.set("correct", stats.matches.toString())
-                        params.set("total", stats.total.toString())
-                        params.set("time", stats.duration.toString())
+                        if (hearts === 0) {
+                            // If we completed due to time but hearts were 0, or just regular complete
+                            // Actually, let's assume we want to push to results even if hearts > 0
+                        }
 
-                        // Submit Score
-                        import("@/lib/supabase/client").then(async ({ createClient }) => {
-                            const supabase = createClient()
-                            const { data: { user } } = await supabase.auth.getUser()
-                            if (user) {
-                                import("@/app/actions-social").then(({ submitGameScore }) => {
-                                    submitGameScore(user.id, stats.score)
-                                })
-                            }
+                        // Submit Score (Guest Friendly)
+                        import("@/app/actions-social").then(async ({ submitGameScore }) => {
+                            // Try to get user, else null
+                            import("@/lib/supabase/client").then(async ({ createClient }) => {
+                                const supabase = createClient()
+                                const { data: { user } } = await supabase.auth.getUser()
+
+                                const result = await submitGameScore(
+                                    user?.id || null,
+                                    stats.score,
+                                    undefined,
+                                    { correct: stats.matches, total: stats.total, duration: stats.duration }
+                                )
+
+                                const params = new URLSearchParams()
+                                params.set("score", stats.score.toString())
+                                params.set("correct", stats.matches.toString())
+                                params.set("total", stats.total.toString())
+                                params.set("time", stats.duration.toString())
+                                if (result.sessionId) params.set("sessionId", result.sessionId)
+                                if (hearts <= 0) params.set("out", "true")
+
+                                router.push(`/results?${params.toString()}`)
+                            })
                         })
-
-                        router.push(`/results?${params.toString()}`)
                     }}
                 />
             )}
+
+
         </main>
     )
 }

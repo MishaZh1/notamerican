@@ -4,18 +4,22 @@ import { updateSession } from '@/lib/supabase/middleware'
 export async function middleware(request: NextRequest) {
     const { response, user } = await updateSession(request)
 
-    // Protected routes: redirect to login if not authenticated
-    if (request.nextUrl.pathname.startsWith('/dashboard') || request.nextUrl.pathname.startsWith('/settings')) {
-        if (!user) {
-            return NextResponse.redirect(new URL('/login', request.url))
-        }
+    // Protected routes that require authentication
+    const protectedRoutes = ['/dashboard']
+    const isProtectedRoute = protectedRoutes.some(route =>
+        request.nextUrl.pathname.startsWith(route)
+    )
+
+    // Redirect to login if accessing protected route without auth
+    if (isProtectedRoute && !user) {
+        const loginUrl = new URL('/login', request.url)
+        loginUrl.searchParams.set('redirect', request.nextUrl.pathname)
+        return NextResponse.redirect(loginUrl)
     }
 
-    // Auth routes: redirect to dashboard if already authenticated
-    if (request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/signup')) {
-        if (user) {
-            return NextResponse.redirect(new URL('/dashboard', request.url))
-        }
+    // Redirect to dashboard if accessing login while authenticated
+    if (request.nextUrl.pathname === '/login' && user) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
     return response

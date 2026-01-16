@@ -13,8 +13,6 @@ function ResultsContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
 
-    const supabase = createClient()
-
     const score = parseInt(searchParams.get("score") || "0")
     const correct = parseInt(searchParams.get("correct") || "0")
     const sessionId = searchParams.get("sessionId")
@@ -27,8 +25,25 @@ function ResultsContent() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isSaved, setIsSaved] = useState(false)
 
+    // Subscription Modal
+    const [showSubscription, setShowSubscription] = useState(false)
 
+    // Load persisted name / Track Games
+    useEffect(() => {
+        // Load name
+        const storedName = localStorage.getItem("nota_user_name")
+        const storedEmail = localStorage.getItem("nota_user_email")
+        if (storedName) setGuestName(storedName)
+        if (storedEmail) setGuestEmail(storedEmail)
 
+        // Track Games
+        const gamesPlayed = parseInt(localStorage.getItem("nota_games_played") || "0") + 1
+        localStorage.setItem("nota_games_played", gamesPlayed.toString())
+
+        if (gamesPlayed >= 3) {
+            setShowSubscription(true)
+        }
+    }, [])
 
 
     const handleGuestSubmit = async (e: React.FormEvent) => {
@@ -39,6 +54,11 @@ function ResultsContent() {
         try {
             await registerGuest(sessionId, guestName, guestEmail)
             setIsSaved(true)
+
+            // Persist
+            localStorage.setItem("nota_user_name", guestName)
+            if (guestEmail) localStorage.setItem("nota_user_email", guestEmail)
+
         } catch (error) {
             console.error(error)
             alert("Failed to save score. Please try again.")
@@ -48,7 +68,7 @@ function ResultsContent() {
     }
 
     return (
-        <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-background bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-yellow-900/20 via-background to-background">
+        <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-background bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-yellow-900/20 via-background to-background relative">
             <div className="w-full max-w-md space-y-6 animate-in zoom-in duration-500">
 
                 {/* Header */}
@@ -143,6 +163,33 @@ function ResultsContent() {
                 </div>
 
             </div>
+
+            {/* SUBSCRIPTION MODAL */}
+            {showSubscription && (
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <Card className="w-full max-w-sm border-4 border-indigo-500 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-indigo-500 to-purple-600" />
+                        <CardContent className="pt-20 px-6 pb-6 text-center relative pointer-events-auto">
+                            <div className="w-20 h-20 bg-white rounded-full mx-auto shadow-lg flex items-center justify-center mb-4 border-4 border-indigo-100">
+                                <span className="text-4xl">👑</span>
+                            </div>
+                            <h2 className="text-2xl font-black text-indigo-900 mb-2">Become a Pro Explorer!</h2>
+                            <p className="text-slate-600 mb-6 text-sm">
+                                You've played 3 games! Unlock unlimited hearts, ad-free experience, and exclusive avatars.
+                            </p>
+
+                            <div className="space-y-3">
+                                <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 text-lg">
+                                    Start Free Trial
+                                </Button>
+                                <Button variant="ghost" className="text-slate-400 btn-sm" onClick={() => setShowSubscription(false)}>
+                                    Maybe later
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </main>
     )
 }

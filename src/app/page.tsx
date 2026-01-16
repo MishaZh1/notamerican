@@ -2,18 +2,40 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Award, Play, User } from "lucide-react"
+import { Award, Play, LogIn, User } from "lucide-react"
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
 
 export default function Home() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      setIsAuthenticated(!!user)
+    }
+    checkAuth()
+  }, [])
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-6 bg-gradient-to-b from-slate-50 to-white max-w-md mx-auto">
 
-      {/* Top Bar - Minimal */}
+      {/* Top Bar - Login/Dashboard Link */}
       <div className="w-full flex justify-end py-4 px-2 min-h-[40px]">
-        <Link href="/dashboard">
-          <button className="w-10 h-10 rounded-full border-2 border-slate-200 flex items-center justify-center bg-white hover:bg-slate-50 transition-colors">
-            <User className="w-6 h-6 text-slate-400" />
+        <Link href={isAuthenticated ? "/dashboard" : "/login"}>
+          <button className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-300 rounded-xl font-medium text-slate-700 transition-all shadow-sm">
+            {isAuthenticated ? (
+              <>
+                <User className="w-4 h-4" />
+                Dashboard
+              </>
+            ) : (
+              <>
+                <LogIn className="w-4 h-4" />
+                Login
+              </>
+            )}
           </button>
         </Link>
       </div>
