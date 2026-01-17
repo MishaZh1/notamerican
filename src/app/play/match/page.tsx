@@ -88,9 +88,7 @@ export default function MatchPage() {
             const newLives = Math.max(0, prev - 1)
             if (newLives === 0) {
                 // Game Over by Mistakes
-                setTimeout(() => {
-                    finishGame(currentScore, 'mistakes')
-                }, 2000)
+                finishGame(currentScore, 'mistakes')
             }
             return newLives
         })

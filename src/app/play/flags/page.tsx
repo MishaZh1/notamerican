@@ -34,31 +34,28 @@ export default function FlagsPage() {
         setPassports(prev => {
             const newPassports = Math.max(0, prev - 1)
             if (newPassports === 0) {
-                // Game over - submit score and redirect
-                setTimeout(() => {
-                    import("@/lib/supabase/client").then(async ({ createClient }) => {
-                        const supabase = createClient()
-                        const { data: { user } } = await supabase.auth.getUser()
+                import("@/lib/supabase/client").then(async ({ createClient }) => {
+                    const supabase = createClient()
+                    const { data: { user } } = await supabase.auth.getUser()
 
-                        import("@/app/actions-social").then(async ({ submitGameScore }) => {
-                            // Submit with 0 score but valid session
-                            const result = await submitGameScore(
-                                user?.id || null,
-                                0,
-                                undefined,
-                                { correct: 0, total: 5, duration: 0 }
-                            )
+                    import("@/app/actions-social").then(async ({ submitGameScore }) => {
+                        // Submit with 0 score but valid session
+                        const result = await submitGameScore(
+                            user?.id || null,
+                            0,
+                            undefined,
+                            { correct: 0, total: 5, duration: 0 }
+                        )
 
-                            const params = new URLSearchParams()
-                            params.set("score", "0")
-                            params.set("correct", "0")
-                            params.set("out", "true")
-                            if (result?.sessionId) params.set("sessionId", result.sessionId)
+                        const params = new URLSearchParams()
+                        params.set("score", "0")
+                        params.set("correct", "0")
+                        params.set("out", "true")
+                        if (result?.sessionId) params.set("sessionId", result.sessionId)
 
-                            router.push(`/results?${params.toString()}`)
-                        })
+                        router.push(`/results?${params.toString()}`)
                     })
-                }, 2000)
+                })
             }
             return newPassports
         })
