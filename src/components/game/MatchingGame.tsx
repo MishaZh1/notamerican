@@ -602,6 +602,7 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                 {/* Right Column */}
                 <div className="flex-1 flex flex-col gap-4">
                     {rightSlots.map(slotId => {
+                        const card = state.cards.find(c => c.position === slotId)
                         if (!card) return <div key={`slot-${slotId}`} className="h-20 md:h-32 invisible" />
 
                         return (
