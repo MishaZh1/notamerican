@@ -49,6 +49,8 @@ export interface GameStats {
     matches: number
     combo: number
     maxCombo: number
+    duration: number
+    total: number
 }
 
 type Action =
@@ -292,7 +294,7 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
         maxCombo: 0,
         score: 0,
         timeLeft: GAME_DURATION,
-        occupiedPositions: new Set(),
+        occupiedPositions: new Set<number>(),
         isProcessing: false
     })
 
@@ -323,7 +325,9 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                     score: state.score,
                     matches: state.totalMatches,
                     combo: state.combo,
-                    maxCombo: state.maxCombo
+                    maxCombo: state.maxCombo,
+                    duration: 90 - state.timeLeft,
+                    total: state.totalMatches
                 })
             }, 2000)
         }

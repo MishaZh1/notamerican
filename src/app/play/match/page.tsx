@@ -14,8 +14,8 @@ import { createClient } from "@/lib/supabase/client"
 
 export default function MatchPage() {
     const router = useRouter()
-    const [allPairs, setAllPairs] = useState<{ question: string, answer: string, type?: 'flag' | 'text' }[]>([])
-    const [filteredPairs, setFilteredPairs] = useState<{ question: string, answer: string, type?: 'flag' | 'text' }[]>([])
+    const [allPairs, setAllPairs] = useState<{ question: string, answer: string, type?: 'flag' | 'text', continent?: string }[]>([])
+    const [filteredPairs, setFilteredPairs] = useState<{ question: string, answer: string, type?: 'flag' | 'text', continent?: string }[]>([])
     const [loading, setLoading] = useState(true)
     const [selectedContinent, setSelectedContinent] = useState("All")
     const [gameKey, setGameKey] = useState(0)
