@@ -1,78 +1,128 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { TOP_CAPITALS } from "@/lib/data/capitals"
 import { MatchingGame } from "@/components/game/MatchingGame"
-import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Loader2 } from "lucide-react"
+import { CONTINENTS } from "@/lib/data/continent-mapping"
+import { TOP_CAPITALS } from "@/lib/data/capitals"
+import { cn } from "@/lib/utils"
+// Import these for score submission
+import { submitGameScore } from "@/app/actions-social"
+import { createClient } from "@/lib/supabase/client"
 
 export default function MatchPage() {
     const router = useRouter()
-    const [pairs, setPairs] = useState<{ question: string, answer: string }[]>([])
+    const [allPairs, setAllPairs] = useState<{ question: string, answer: string, type?: 'flag' | 'text' }[]>([])
+    const [filteredPairs, setFilteredPairs] = useState<{ question: string, answer: string, type?: 'flag' | 'text' }[]>([])
     const [loading, setLoading] = useState(true)
-
     const [selectedContinent, setSelectedContinent] = useState("All")
     const [gameKey, setGameKey] = useState(0)
+    const [currentScore, setCurrentScore] = useState(0)
+    const [lives, setLives] = useState(5)
+    // Track stats for submission
+    const [gameStats, setGameStats] = useState({ matches: 0, combo: 0, maxCombo: 0 })
 
-    // Import CONTINENTS
-    const { CONTINENTS } = require("@/lib/data/continent-mapping")
-
+    // Load and format data
     useEffect(() => {
-        setLoading(true)
+        // @ts-ignore - emoji property exists now
+        const formattedPairs = TOP_CAPITALS.map(c => ({
+            question: `${c.emoji || ''} ${c.country}`,
+            answer: c.capital,
+            type: 'text' as const,
+            continent: c.continent
+        }))
+        setAllPairs(formattedPairs)
+        setLoading(false)
+    }, [])
 
-        let filtered = [...TOP_CAPITALS]
+    // Filter pairs when continent changes
+    useEffect(() => {
+        if (allPairs.length === 0) return
+
+        let filtered = allPairs
         if (selectedContinent !== "All") {
-            filtered = TOP_CAPITALS.filter(c => c.continent === selectedContinent)
+            filtered = allPairs.filter(p => p.continent === selectedContinent)
         }
 
-        // Randomly select 6 pairs
-        const shuffled = filtered.sort(() => 0.5 - Math.random())
-        const selected = shuffled.slice(0, 6)
+        // Shuffle filtered pairs
+        const shuffled = [...filtered].sort(() => Math.random() - 0.5)
+        setFilteredPairs(shuffled)
 
-        const newPairs = selected.map(item => ({
-            question: item.country,
-            answer: item.capital
-        }))
-
-        setPairs(newPairs)
-        setLoading(false)
+        // Reset game
         setGameKey(prev => prev + 1)
-    }, [selectedContinent]) // Re-run when continent changes
+        setCurrentScore(0)
+        setLives(5)
+    }, [selectedContinent, allPairs])
 
-    const [hearts, setHearts] = useState(3) // Start with 3 hearts for Match
+    // Unified Game Over / Finish Handler
+    const finishGame = async (score: number, reason: 'time' | 'mistakes' | 'manual') => {
+        try {
+            const supabase = createClient()
+            const { data: { user } } = await supabase.auth.getUser()
 
-    useEffect(() => {
-        // Reset hearts when game resets
-        setHearts(3)
-    }, [gameKey])
+            // Submit score
+            const result = await submitGameScore(
+                user?.id || null,
+                score,
+                undefined,
+                { correct: score / 10, total: (score / 10) + (5 - lives), duration: 0 } // Approx stats
+            )
+
+            const params = new URLSearchParams()
+            params.set("score", score.toString())
+            params.set("correct", (score / 10).toString()) // Assuming 10pts per match
+            if (reason === 'mistakes') params.set("out", "true")
+            if (result?.sessionId) params.set("sessionId", result.sessionId)
+
+            router.push(`/results?${params.toString()}`)
+        } catch (error) {
+            console.error("Error submitting score:", error)
+            router.push('/')
+        }
+    }
+
+    const handleWrongMatch = () => {
+        setLives(prev => {
+            const newLives = Math.max(0, prev - 1)
+            if (newLives === 0) {
+                // Game Over by Mistakes
+                setTimeout(() => {
+                    finishGame(currentScore, 'mistakes')
+                }, 2000)
+            }
+            return newLives
+        })
+    }
 
     return (
         <main className="min-h-screen p-4 bg-background flex flex-col">
             <div className="flex justify-between items-center mb-4">
-                <Button variant="ghost" onClick={() => router.push('/')}>Quit</Button>
-                <div className="flex flex-col items-center">
-                    <h1 className="font-bold text-xl text-primary">Match Madness</h1>
-                    <div className="text-rose-500 font-black animate-pulse">
-                        {"❤️".repeat(hearts)}
-                    </div>
+                <Button variant="ghost" size="sm" onClick={() => router.push('/')}>Quit</Button>
+
+                <h1 className="font-black text-xl text-primary hidden md:block">Match Madness</h1>
+
+                {/* Lives/Mistakes Display */}
+                <div className="flex items-center gap-1 text-slate-700 font-black">
+                    <span className="text-xl">❤️</span>
+                    <span className="text-xl">{lives}</span>
                 </div>
-                <div className="w-10" />
             </div>
 
             {/* Continent Selector */}
-            <div className="w-full overflow-x-auto no-scrollbar pb-2 mb-2 -mx-4 px-4 scroll-smooth">
-                <div className="flex gap-3 w-max mx-auto md:mx-0">
-                    {CONTINENTS.map((continent: string) => (
+            <div className="w-full overflow-x-auto no-scrollbar pb-2 mb-4 -mx-4 px-4 scroll-smooth">
+                <div className="flex gap-2 w-max mx-auto md:mx-0">
+                    {CONTINENTS.map((continent) => (
                         <button
                             key={continent}
                             onClick={() => setSelectedContinent(continent)}
-                            className={`px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all border-2 touch-manipulation
-                                ${selectedContinent === continent
-                                    ? "bg-primary border-primary text-primary-foreground shadow-md scale-105"
-                                    : "bg-background border-border hover:bg-accent/50 text-muted-foreground hover:scale-105"
-                                }`
-                            }
+                            className={cn(
+                                "px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border-2 touch-manipulation",
+                                selectedContinent === continent
+                                    ? "bg-primary border-primary text-primary-foreground shadow-md"
+                                    : "bg-background border-border hover:bg-accent/50 text-muted-foreground"
+                            )}
                         >
                             {continent}
                         </button>
@@ -81,53 +131,21 @@ export default function MatchPage() {
             </div>
 
             {loading ? (
-                <div className="h-[50vh] flex items-center justify-center">
+                <div className="flex-1 flex items-center justify-center">
                     <Loader2 className="animate-spin text-primary w-8 h-8" />
                 </div>
             ) : (
                 <MatchingGame
                     key={gameKey}
-                    pairs={pairs}
-                    passports={hearts}
-                    onWrongMatch={() => {
-                        setHearts(prev => Math.max(0, prev - 1))
-                    }}
+                    pairs={filteredPairs}
+                    onWrongMatch={handleWrongMatch}
                     onComplete={(stats) => {
-                        if (hearts === 0) {
-                            // If we completed due to time but hearts were 0, or just regular complete
-                            // Actually, let's assume we want to push to results even if hearts > 0
-                        }
-
-                        // Submit Score (Guest Friendly)
-                        import("@/app/actions-social").then(async ({ submitGameScore }) => {
-                            // Try to get user, else null
-                            import("@/lib/supabase/client").then(async ({ createClient }) => {
-                                const supabase = createClient()
-                                const { data: { user } } = await supabase.auth.getUser()
-
-                                const result = await submitGameScore(
-                                    user?.id || null,
-                                    stats.score,
-                                    undefined,
-                                    { correct: stats.matches, total: stats.total, duration: stats.duration }
-                                )
-
-                                const params = new URLSearchParams()
-                                params.set("score", stats.score.toString())
-                                params.set("correct", stats.matches.toString())
-                                params.set("total", stats.total.toString())
-                                params.set("time", stats.duration.toString())
-                                if (result.sessionId) params.set("sessionId", result.sessionId)
-                                if (hearts <= 0) params.set("out", "true")
-
-                                router.push(`/results?${params.toString()}`)
-                            })
-                        })
+                        // Auto-finish on Time Up
+                        setCurrentScore(stats.score)
+                        finishGame(stats.score, 'time')
                     }}
                 />
             )}
-
-
         </main>
     )
 }

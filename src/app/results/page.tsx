@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Trophy, Home, RotateCcw, Save, TrendingUp } from "lucide-react"
+import { Trophy, Home, RotateCcw, Save, TrendingUp, Crown } from "lucide-react"
 import { Suspense, useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { registerGuest } from "@/app/actions-social"
@@ -144,52 +144,73 @@ function ResultsContent() {
 
 
                 {/* ACTIONS */}
-                <div className="grid gap-3">
-                    <Button size="lg" className="w-full text-lg h-14 shadow-xl" onClick={() => router.push('/play/flags')}>
-                        <RotateCcw className="mr-2 w-5 h-5" />
-                        Play Again (Blitz)
-                    </Button>
-
-                    <div className="flex gap-3">
-                        <Button variant="secondary" className="flex-1" onClick={() => router.push('/')}>
-                            <Home className="mr-2 w-4 h-4" />
-                            Home
-                        </Button>
-                        <Button variant="outline" className="flex-1" onClick={() => router.push('/leaderboard')}>
-                            <Trophy className="mr-2 w-4 h-4" />
-                            Leaderboard
-                        </Button>
+                <div className="w-full">
+                    {/* Upgrade Banner */}
+                    <div
+                        className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4 text-white shadow-lg cursor-pointer transition-transform hover:scale-105 mb-6"
+                        onClick={() => setShowSubscription(true)}
+                    >
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-white/20 p-2 rounded-lg"><Crown className="w-6 h-6" /></div>
+                                <div>
+                                    <h3 className="font-bold text-lg">Go Premium</h3>
+                                    <p className="text-xs opacity-90">Unlimited hearts & no ads</p>
+                                </div>
+                            </div>
+                            <Button size="sm" variant="secondary" className="font-bold text-indigo-600 h-8">
+                                Upgrade
+                            </Button>
+                        </div>
                     </div>
+
+                    <div className="grid gap-3">
+                        <Button size="lg" className="w-full text-lg h-14 shadow-xl" onClick={() => router.push('/play/flags')}>
+                            <RotateCcw className="mr-2 w-5 h-5" />
+                            Play Again (Blitz)
+                        </Button>
+
+                        <div className="flex gap-3">
+                            <Button variant="secondary" className="flex-1" onClick={() => router.push('/')}>
+                                <Home className="mr-2 w-4 h-4" />
+                                Home
+                            </Button>
+                            <Button variant="outline" className="flex-1" onClick={() => router.push('/leaderboard')}>
+                                <Trophy className="mr-2 w-4 h-4" />
+                                Leaderboard
+                            </Button>
+                        </div>
+                    </div>
+
                 </div>
 
+                {/* SUBSCRIPTION MODAL */}
+                {showSubscription && (
+                    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+                        <Card className="w-full max-w-sm border-4 border-indigo-500 shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-indigo-500 to-purple-600" />
+                            <CardContent className="pt-20 px-6 pb-6 text-center relative pointer-events-auto">
+                                <div className="w-20 h-20 bg-white rounded-full mx-auto shadow-lg flex items-center justify-center mb-4 border-4 border-indigo-100">
+                                    <span className="text-4xl">👑</span>
+                                </div>
+                                <h2 className="text-2xl font-black text-indigo-900 mb-2">Become a Pro Explorer!</h2>
+                                <p className="text-slate-600 mb-6 text-sm">
+                                    You've played 3 games! Unlock unlimited hearts, ad-free experience, and exclusive avatars.
+                                </p>
+
+                                <div className="space-y-3">
+                                    <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 text-lg">
+                                        Start Free Trial
+                                    </Button>
+                                    <Button variant="ghost" className="text-slate-400 btn-sm" onClick={() => setShowSubscription(false)}>
+                                        Maybe later
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
             </div>
-
-            {/* SUBSCRIPTION MODAL */}
-            {showSubscription && (
-                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
-                    <Card className="w-full max-w-sm border-4 border-indigo-500 shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-indigo-500 to-purple-600" />
-                        <CardContent className="pt-20 px-6 pb-6 text-center relative pointer-events-auto">
-                            <div className="w-20 h-20 bg-white rounded-full mx-auto shadow-lg flex items-center justify-center mb-4 border-4 border-indigo-100">
-                                <span className="text-4xl">👑</span>
-                            </div>
-                            <h2 className="text-2xl font-black text-indigo-900 mb-2">Become a Pro Explorer!</h2>
-                            <p className="text-slate-600 mb-6 text-sm">
-                                You've played 3 games! Unlock unlimited hearts, ad-free experience, and exclusive avatars.
-                            </p>
-
-                            <div className="space-y-3">
-                                <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 text-lg">
-                                    Start Free Trial
-                                </Button>
-                                <Button variant="ghost" className="text-slate-400 btn-sm" onClick={() => setShowSubscription(false)}>
-                                    Maybe later
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
         </main>
     )
 }
