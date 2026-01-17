@@ -76,8 +76,8 @@ interface MatchingGameProps {
 }
 
 const TOTAL_CARDS = 10
-const MATCH_DISPLAY_TIME = 400 // Slightly longer to see the match
-const ANIMATION_TIME = 300
+const MATCH_DISPLAY_TIME = 200 // Snappy!
+const ANIMATION_TIME = 200
 const GAME_DURATION = 90 // 90 seconds
 const GOAL_MATCHES = 40
 
@@ -188,7 +188,7 @@ function gameReducer(state: GameState, action: Action): GameState {
 
             return {
                 ...state,
-                isProcessing: true, // Keep locked
+                isProcessing: false, // UNLOCK IMMEDIATELY for flow
                 totalMatches: state.totalMatches + 1,
                 combo: newCombo,
                 maxCombo: Math.max(state.maxCombo, newCombo),
