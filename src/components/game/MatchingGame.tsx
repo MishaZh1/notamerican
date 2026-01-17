@@ -76,7 +76,7 @@ interface MatchingGameProps {
 }
 
 const TOTAL_CARDS = 10
-const MATCH_DISPLAY_TIME = 200 // Snappy!
+const MATCH_DISPLAY_TIME = 3500 // 3.5s Visual Delay
 const ANIMATION_TIME = 200
 const GAME_DURATION = 90 // 90 seconds
 const GOAL_MATCHES = 40
@@ -463,7 +463,7 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
     }
 
     const getCardClass = (card: Card) => {
-        const base = "h-24 md:h-32 w-full rounded-2xl border-2 border-b-4 font-bold flex items-center justify-center cursor-pointer transition-all duration-100 select-none text-base md:text-xl relative overflow-hidden"
+        const base = "h-20 md:h-32 w-full rounded-2xl border-2 border-b-4 font-bold flex items-center justify-center cursor-pointer transition-all duration-100 select-none text-sm md:text-xl relative overflow-hidden"
 
         // Add specific sizing for text vs flags if needed
         const contentClass = "z-10 text-center px-1"
@@ -551,7 +551,7 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
             </div>
 
             {/* Grid - Fixed Layout */}
-            <div className="flex gap-4 md:gap-8 mt-4 relative w-full h-full max-w-4xl mx-auto">
+            <div className="flex gap-3 md:gap-8 mt-2 relative w-full h-full max-w-4xl mx-auto">
                 {/* Overlay for paused/finished */}
                 {state.phase === 'FINISHED' && (
                     <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center rounded-xl animate-in fade-in">
@@ -565,10 +565,10 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                     {leftSlots.map(slotId => {
                         const card = state.cards.find(c => c.position === slotId)
                         // If no card found for slot (shouldn't happen), render empty placeholder
-                        if (!card) return <div key={`slot-${slotId}`} className="h-24 md:h-32 invisible" />
+                        if (!card) return <div key={`slot-${slotId}`} className="h-20 md:h-32 invisible" />
 
                         return (
-                            <div key={`container-left-${slotId}`} className="h-24 md:h-32 relative">
+                            <div key={`container-left-${slotId}`} className="h-20 md:h-32 relative">
                                 <AnimatePresence mode="wait">
                                     <motion.div
                                         key={card.id}
@@ -602,11 +602,10 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                 {/* Right Column */}
                 <div className="flex-1 flex flex-col gap-4">
                     {rightSlots.map(slotId => {
-                        const card = state.cards.find(c => c.position === slotId)
-                        if (!card) return <div key={`slot-${slotId}`} className="h-24 md:h-32 invisible" />
+                        if (!card) return <div key={`slot-${slotId}`} className="h-20 md:h-32 invisible" />
 
                         return (
-                            <div key={`container-right-${slotId}`} className="h-24 md:h-32 relative">
+                            <div key={`container-right-${slotId}`} className="h-20 md:h-32 relative">
                                 <AnimatePresence mode="wait">
                                     <motion.div
                                         key={card.id}
