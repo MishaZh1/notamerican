@@ -76,8 +76,10 @@ interface MatchingGameProps {
 }
 
 const TOTAL_CARDS = 10
-const MATCH_DISPLAY_TIME = 3500 // 3.5s Visual Delay
-const ANIMATION_TIME = 200
+const MATCH_DISPLAY_TIME = 500 // Brief moment to show match success
+const DISAPPEAR_ANIMATION_TIME = 2000 // 2 seconds to disappear
+const REPLACEMENT_DELAY = 4000 // 4 seconds from match to new pair appearing
+const APPEAR_ANIMATION_TIME = 300 // Time for new cards to appear
 const GAME_DURATION = 90 // 90 seconds
 const GOAL_MATCHES = 40
 
@@ -243,10 +245,47 @@ function gameReducer(state: GameState, action: Action): GameState {
         case 'REPLACE_CARDS': {
             const { oldPositions, newCards } = action.payload
             const newOccupied = new Set(state.occupiedPositions)
+
+            // 1. Manage Occupied Positions
+            // Remove old
             newOccupied.delete(oldPositions[0])
             newOccupied.delete(oldPositions[1])
+            // Add new (Wait, we should effectively swap, but let's be safe)
+            // Actually, we don't strictly need to manage occupied for the logic, 
+            // but let's clear the positions we are ostensibly freeing up.
 
-            const filteredCards = state.cards.filter(c => !oldPositions.includes(c.position))
+            // 2. Identify safe removals
+            // We want to remove cards at oldPositions, BUT ONLY if they are "garbage" (DISAPPEARING/MATCHED)
+            // If a NEW card (APPEARING/IDLE) is there, we must NOT touch it.
+            const safeToRemoveIds = new Set<string>()
+
+            state.cards.forEach(c => {
+                if (oldPositions.includes(c.position)) {
+                    // Only delete if it's an old card
+                    if (c.state === 'DISAPPEARING' || c.state === 'MATCHED') {
+                        safeToRemoveIds.add(c.id)
+                    }
+                }
+            })
+
+            // 3. Prepare for new cards
+            // We also need to clear the way for newCards. 
+            // If there is ANY card at a target position, it must be removed to make room 
+            // (Assumes the new position choice was valid and any existing card there is garbage)
+            const targetPositions = newCards.map(c => c.position)
+
+            // Filter the cards
+            const filteredCards = state.cards.filter(c => {
+                // Remove if it's marked for safe removal
+                if (safeToRemoveIds.has(c.id)) return false
+
+                // Remove if it's obstructing a target position (Blocking a new card)
+                // Note: The "Smart Positioning" should ideally pick empty spots, 
+                // but if we are swapping onto a DISAPPEARING spot, we overwrite it.
+                if (targetPositions.includes(c.position)) return false
+
+                return true
+            })
 
             return {
                 ...state,
@@ -301,6 +340,10 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
     const stateRef = useRef(state)
     const pairsPoolRef = useRef(pairs)
     const matchedPairsRef = useRef<MatchedPair[]>([])
+
+    // Shared pools for smart positioning - tracks all freed positions
+    const freeLeftPoolRef = useRef<Set<number>>(new Set())
+    const freeRightPoolRef = useRef<Set<number>>(new Set())
 
     useEffect(() => { stateRef.current = state }, [state])
     useEffect(() => { pairsPoolRef.current = pairs }, [pairs])
@@ -381,12 +424,25 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
         }
 
         if (card1.pairId === card2.pairId) {
-            // Correct
+            // Correct - Show match briefly, then start disappearing
             dispatch({ type: 'MATCH_CORRECT', payload: { positions: [pos1, pos2] } })
 
+            // Add positions to the shared free pools IMMEDIATELY
+            // This allows other replacements to use these positions
+            const leftPos = pos1 < 5 ? pos1 : pos2
+            const rightPos = pos1 >= 5 ? pos1 : pos2
+            freeLeftPoolRef.current.add(leftPos)
+            freeRightPoolRef.current.add(rightPos)
+
+            // Start disappearing animation after brief success display
+            setTimeout(() => {
+                dispatch({ type: 'START_DISAPPEARING', payload: { positions: [pos1, pos2] } })
+            }, MATCH_DISPLAY_TIME)
+
+            // Schedule replacement after 4 seconds total
             const timerId = setTimeout(() => {
                 handleReplacement([pos1, pos2])
-            }, MATCH_DISPLAY_TIME)
+            }, REPLACEMENT_DELAY)
 
             matchedPairsRef.current.push({
                 cardIndices: [pos1, pos2],
@@ -404,58 +460,99 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
     }, [state.selectedCards])
 
     const handleReplacement = useCallback((oldPositions: [number, number]) => {
-        dispatch({ type: 'START_DISAPPEARING', payload: { positions: oldPositions } })
+        const currentState = stateRef.current
+
+        // Use the shared position pools to find available spots
+        // These pools contain ALL positions freed up by recent matches
+        const sortedOld = [...oldPositions].sort((a, b) => a - b)
+        const oldLeft = sortedOld[0]
+        const oldRight = sortedOld[1]
+
+        // Get available positions from the shared pools
+        const availableLeft = Array.from(freeLeftPoolRef.current)
+        const availableRight = Array.from(freeRightPoolRef.current)
+
+        // Smart positioning: prefer different positions than our own match
+        const otherLeftPositions = availableLeft.filter(p => p !== oldLeft)
+        const otherRightPositions = availableRight.filter(p => p !== oldRight)
+
+        let posLeft: number
+        let posRight: number
+
+        // Pick a left position (prefer different, fallback to same)
+        if (otherLeftPositions.length > 0) {
+            posLeft = otherLeftPositions[Math.floor(Math.random() * otherLeftPositions.length)]
+        } else if (availableLeft.includes(oldLeft)) {
+            posLeft = oldLeft
+        } else if (availableLeft.length > 0) {
+            posLeft = availableLeft[0]
+        } else {
+            posLeft = oldLeft // Ultimate fallback
+        }
+
+        // Pick a right position (prefer different, fallback to same)
+        if (otherRightPositions.length > 0) {
+            posRight = otherRightPositions[Math.floor(Math.random() * otherRightPositions.length)]
+        } else if (availableRight.includes(oldRight)) {
+            posRight = oldRight
+        } else if (availableRight.length > 0) {
+            posRight = availableRight[0]
+        } else {
+            posRight = oldRight // Ultimate fallback
+        }
+
+        // IMPORTANT: Remove selected positions from the pools
+        // This prevents other replacements from using the same spot
+        freeLeftPoolRef.current.delete(posLeft)
+        freeRightPoolRef.current.delete(posRight)
+
+        // Get new pair
+        const currentContent = new Set(currentState.cards.map(c => c.content))
+        const availablePairs = pairsPoolRef.current.filter(p => !currentContent.has(p.question))
+
+        // Fallback if pool exhausted
+        const randomPair = availablePairs.length > 0
+            ? availablePairs[Math.floor(Math.random() * availablePairs.length)]
+            : pairsPoolRef.current[Math.floor(Math.random() * pairsPoolRef.current.length)]
+
+        const newPairId = `pair-${Date.now()}-${Math.random()}`
+
+        const newCards: Card[] = [
+            {
+                id: `card-${newPairId}-left`,
+                pairId: newPairId,
+                content: randomPair.question,
+                type: 'text',
+                position: posLeft,
+                state: 'APPEARING'
+            },
+            {
+                id: `card-${newPairId}-right`,
+                pairId: newPairId,
+                content: randomPair.answer,
+                type: randomPair.type === 'flag' ? 'image' : 'text',
+                position: posRight,
+                state: 'APPEARING'
+            }
+        ]
+
+        console.log('🔄 Replacing cards:', {
+            oldPositions,
+            newPositions: [posLeft, posRight],
+            poolBefore: { left: availableLeft, right: availableRight },
+            newCards: newCards.map(c => ({ id: c.id, position: c.position, content: c.content }))
+        })
+
+        // Remove old cards at oldPositions, add new cards at posLeft/posRight (may be different!)
+        dispatch({ type: 'REPLACE_CARDS', payload: { oldPositions, newCards } })
 
         setTimeout(() => {
-            const currentState = stateRef.current
-
-            // Reuse the EXACT same positions. No shuffling. No collisions.
-            // Sort them so we know which is left (0-4) and right (5-9)
-            const sortedPos = [...oldPositions].sort((a, b) => a - b)
-            const posLeft = sortedPos[0] // Guaranteed 0-4
-            const posRight = sortedPos[1] // Guaranteed 5-9
-
-            // Get new pair
-            const currentContent = new Set(currentState.cards.map(c => c.content))
-            const availablePairs = pairsPoolRef.current.filter(p => !currentContent.has(p.question))
-
-            // Fallback if pool exhausted
-            const randomPair = availablePairs.length > 0
-                ? availablePairs[Math.floor(Math.random() * availablePairs.length)]
-                : pairsPoolRef.current[Math.floor(Math.random() * pairsPoolRef.current.length)]
-
-            const newPairId = `pair-${Date.now()}-${Math.random()}`
-
-            const newCards: Card[] = [
-                {
-                    id: `card-${newPairId}-left`,
-                    pairId: newPairId,
-                    content: randomPair.question,
-                    type: 'text',
-                    position: posLeft,
-                    state: 'APPEARING'
-                },
-                {
-                    id: `card-${newPairId}-right`,
-                    pairId: newPairId,
-                    content: randomPair.answer,
-                    type: randomPair.type === 'flag' ? 'image' : 'text',
-                    position: posRight,
-                    state: 'APPEARING'
-                }
-            ]
-
-            dispatch({ type: 'REPLACE_CARDS', payload: { oldPositions, newCards } })
-
-            setTimeout(() => {
-                dispatch({
-                    type: 'SET_APPEARING_TO_IDLE',
-                    payload: { cardIds: newCards.map(c => c.id) }
-                })
-                dispatch({ type: 'UNLOCK_INPUT' })
-            }, ANIMATION_TIME)
-
-        }, ANIMATION_TIME)
+            dispatch({
+                type: 'SET_APPEARING_TO_IDLE',
+                payload: { cardIds: newCards.map(c => c.id) }
+            })
+            dispatch({ type: 'UNLOCK_INPUT' })
+        }, APPEAR_ANIMATION_TIME)
     }, [])
 
     const handleCardClick = (position: number) => {
@@ -463,25 +560,28 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
     }
 
     const getCardClass = (card: Card) => {
-        const base = "h-20 md:h-32 w-full rounded-2xl border-2 border-b-4 font-bold flex items-center justify-center cursor-pointer transition-all duration-100 select-none text-sm md:text-xl relative overflow-hidden"
+        const base = "h-20 md:h-32 w-full rounded-2xl border-2 border-b-4 font-bold flex items-center justify-center cursor-pointer select-none text-sm md:text-xl relative overflow-hidden"
 
         // Add specific sizing for text vs flags if needed
         const contentClass = "z-10 text-center px-1"
 
         if (card.state === 'SELECTED') {
-            return cn(base, "border-cyan-500 bg-cyan-100 text-cyan-700 -translate-y-1")
+            return cn(base, "border-cyan-500 bg-cyan-100 text-cyan-700")
         }
         if (card.state === 'MATCHED') {
-            return cn(base, "border-green-500 bg-green-100 text-green-700 scale-95 opacity-50")
+            return cn(base, "border-green-500 bg-green-100 text-green-700")
         }
         if (card.state === 'WRONG') {
-            return cn(base, "border-red-500 bg-red-100 text-red-700 animate-shake")
+            return cn(base, "border-red-500 bg-red-100 text-red-700")
         }
-        if (card.state === 'DISAPPEARING' || card.state === 'APPEARING') {
-            return cn(base, "opacity-0 scale-50 p-0 m-0 h-0 w-0 border-0")
+        // DISAPPEARING and APPEARING styles are now handled by Framer Motion variants
+        // We just keep the base layout valid but invisible if needed, 
+        // though framer handles opacity so we can just leave base styles.
+        if (card.state === 'DISAPPEARING') {
+            return cn(base, "border-green-500 bg-green-100 text-green-700 pointer-events-none")
         }
 
-        return cn(base, "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 active:scale-95 active:border-b-2 active:translate-y-0.5")
+        return cn(base, "bg-white border-slate-200 text-slate-700 hover:bg-slate-50")
     }
 
     // RENDER: Intro
@@ -504,6 +604,50 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                 </Button>
             </div>
         )
+    }
+
+    // MOTION VARIANTS
+    const cardVariants = {
+        IDLE: {
+            scale: 1,
+            opacity: 1,
+            y: 0,
+            rotate: 0,
+            transition: { type: "spring", stiffness: 400, damping: 25 }
+        },
+        SELECTED: {
+            scale: 1.05,
+            opacity: 1,
+            y: -4,
+            transition: { type: "spring", stiffness: 500, damping: 30 }
+        },
+        MATCHED: {
+            scale: 1.05,
+            opacity: 1,
+            y: 0,
+            transition: { duration: 0.3 }
+        },
+        WRONG: {
+            x: [0, -10, 10, -10, 10, 0], // Shake effect
+            transition: { duration: 0.4 }
+        },
+        DISAPPEARING: {
+            opacity: 0,
+            scale: 0.8,
+            y: -20, // Gentle float up "spirit" effect
+            transition: { duration: 2, ease: "easeInOut" } // Slow 2s fade as requested
+        },
+        APPEARING: {
+            opacity: 1,
+            scale: 1,
+            y: 0,
+            transition: { type: "spring", stiffness: 400, damping: 15 } // Bouncy pop-in
+        },
+        HIDDEN: {
+            opacity: 0,
+            scale: 0,
+            y: 20
+        }
     }
 
     // Fixed Slots 0-4 and 5-9
@@ -569,16 +713,13 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
 
                         return (
                             <div key={`container-left-${slotId}`} className="h-20 md:h-32 relative">
-                                <AnimatePresence mode="wait">
+                                <AnimatePresence mode="popLayout">
                                     <motion.div
                                         key={card.id}
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{
-                                            opacity: 1,
-                                            scale: card.state === 'MATCHED' ? 0.9 : 1,
-                                        }}
-                                        exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
-                                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                        variants={cardVariants}
+                                        initial="HIDDEN"
+                                        animate={card.state}
+                                        // We don't need exit because we handle DISAPPEARING state manually
                                         onClick={() => handleCardClick(card.position)}
                                         className={getCardClass(card)}
                                     >
@@ -607,16 +748,12 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
 
                         return (
                             <div key={`container-right-${slotId}`} className="h-20 md:h-32 relative">
-                                <AnimatePresence mode="wait">
+                                <AnimatePresence mode="popLayout">
                                     <motion.div
                                         key={card.id}
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{
-                                            opacity: 1,
-                                            scale: card.state === 'MATCHED' ? 0.9 : 1,
-                                        }}
-                                        exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
-                                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                        variants={cardVariants}
+                                        initial="HIDDEN"
+                                        animate={card.state}
                                         onClick={() => handleCardClick(card.position)}
                                         className={getCardClass(card)}
                                     >
@@ -635,7 +772,7 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                                             <motion.div
                                                 initial={{ scale: 0, opacity: 0 }}
                                                 animate={{ scale: 1, opacity: 1 }}
-                                                className="absolute -top-2 -right-2 bg-green-100 rounded-full p-1 border-2 border-white" // Added border for contrast
+                                                className="absolute -top-2 -right-2 bg-green-100 rounded-full p-1 border-2 border-white"
                                             >
                                                 <Sparkles className="w-5 h-5 text-green-600 fill-green-200" />
                                             </motion.div>
