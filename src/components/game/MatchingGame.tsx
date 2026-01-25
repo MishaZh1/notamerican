@@ -1,7 +1,7 @@
 "use client"
 
 import { useReducer, useEffect, useRef, useCallback, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, Variants } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -607,7 +607,7 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
     }
 
     // MOTION VARIANTS
-    const cardVariants = {
+    const cardVariants: Variants = {
         IDLE: {
             scale: 1,
             opacity: 1,
