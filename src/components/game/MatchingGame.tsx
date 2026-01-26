@@ -434,6 +434,8 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
             freeLeftPoolRef.current.add(leftPos)
             freeRightPoolRef.current.add(rightPos)
 
+            console.log('🏊‍♂️ Added to pool:', { leftPos, rightPos, poolL: Array.from(freeLeftPoolRef.current), poolR: Array.from(freeRightPoolRef.current) })
+
             // Start disappearing animation after brief success display
             setTimeout(() => {
                 dispatch({ type: 'START_DISAPPEARING', payload: { positions: [pos1, pos2] } })
@@ -455,7 +457,7 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
             dispatch({ type: 'MATCH_WRONG', payload: { positions: [pos1, pos2] } })
             setTimeout(() => {
                 dispatch({ type: 'CLEAR_WRONG' })
-            }, 500)
+            }, 1000) // Extended to 1s as requested
         }
     }, [state.selectedCards])
 
@@ -482,17 +484,22 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
         // Pick a left position (prefer different, fallback to same)
         if (otherLeftPositions.length > 0) {
             posLeft = otherLeftPositions[Math.floor(Math.random() * otherLeftPositions.length)]
+            console.log('👈 Picking DIFFERENT left:', posLeft, 'from', otherLeftPositions)
         } else if (availableLeft.includes(oldLeft)) {
             posLeft = oldLeft
+            console.log('👈 Fallback LEFT to self:', posLeft)
         } else if (availableLeft.length > 0) {
             posLeft = availableLeft[0]
+            console.log('👈 Fallback LEFT to available:', posLeft)
         } else {
             posLeft = oldLeft // Ultimate fallback
+            console.log('👈 Ultimate Fallback LEFT:', posLeft)
         }
 
         // Pick a right position (prefer different, fallback to same)
         if (otherRightPositions.length > 0) {
             posRight = otherRightPositions[Math.floor(Math.random() * otherRightPositions.length)]
+            console.log('👉 Picking DIFFERENT right:', posRight, 'from', otherRightPositions)
         } else if (availableRight.includes(oldRight)) {
             posRight = oldRight
         } else if (availableRight.length > 0) {
