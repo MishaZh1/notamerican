@@ -410,6 +410,120 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
         dispatch({ type: 'INIT_GAME', payload: { cards: [...leftCards, ...shuffledRight] } })
     }, [pairs])
 
+    const handleStaggeredReplacement = useCallback((oldPositions: [number, number]) => {
+        const currentState = stateRef.current
+
+        // 1. CALCULATE POSITIONS (Do this immediately to reserve spots)
+        const sortedOld = [...oldPositions].sort((a, b) => a - b)
+        const oldLeft = sortedOld[0]
+        const oldRight = sortedOld[1]
+
+        const availableLeft = Array.from(freeLeftPoolRef.current)
+        const availableRight = Array.from(freeRightPoolRef.current)
+
+        const otherLeftPositions = availableLeft.filter(p => p !== oldLeft)
+        const otherRightPositions = availableRight.filter(p => p !== oldRight)
+
+        let posLeft: number
+        let posRight: number
+
+        // Smart Logic Left
+        if (otherLeftPositions.length > 0) {
+            posLeft = otherLeftPositions[Math.floor(Math.random() * otherLeftPositions.length)]
+            console.log('👈 Picking DIFFERENT left:', posLeft)
+        } else if (availableLeft.includes(oldLeft)) {
+            posLeft = oldLeft
+            console.log('👈 Fallback LEFT to self:', posLeft)
+        } else if (availableLeft.length > 0) {
+            posLeft = availableLeft[0]
+            console.log('👈 Fallback LEFT to available:', posLeft)
+        } else {
+            posLeft = oldLeft
+            console.log('👈 Ultimate Fallback LEFT:', posLeft)
+        }
+
+        // Smart Logic Right
+        if (otherRightPositions.length > 0) {
+            posRight = otherRightPositions[Math.floor(Math.random() * otherRightPositions.length)]
+            console.log('👉 Picking DIFFERENT right:', posRight)
+        } else if (availableRight.includes(oldRight)) {
+            posRight = oldRight
+        } else if (availableRight.length > 0) {
+            posRight = availableRight[0]
+        } else {
+            posRight = oldRight
+        }
+
+        // Reserve spots immediately
+        freeLeftPoolRef.current.delete(posLeft)
+        freeRightPoolRef.current.delete(posRight)
+
+        // 2. GENERATE CONTENT (Pair must be consistent)
+        // Note: We need to filter based on CURRENT content to avoid dupes, 
+        // but since we are replacing asynchronously, there's a strict existing content check.
+        // We'll trust the current stateRef.
+        const currentContent = new Set(currentState.cards.map(c => c.content))
+        const availablePairs = pairsPoolRef.current.filter(p => !currentContent.has(p.question))
+
+        const randomPair = availablePairs.length > 0
+            ? availablePairs[Math.floor(Math.random() * availablePairs.length)]
+            : pairsPoolRef.current[Math.floor(Math.random() * pairsPoolRef.current.length)]
+
+        const newPairId = `pair-${Date.now()}-${Math.random()}`
+
+        const cardLeft: Card = {
+            id: `card-${newPairId}-left`,
+            pairId: newPairId,
+            content: randomPair.question,
+            type: 'text',
+            position: posLeft,
+            state: 'APPEARING'
+        }
+
+        const cardRight: Card = {
+            id: `card-${newPairId}-right`,
+            pairId: newPairId,
+            content: randomPair.answer,
+            type: randomPair.type === 'flag' ? 'image' : 'text',
+            position: posRight,
+            state: 'APPEARING'
+        }
+
+        // 3. SCHEDULE REPLACEMENTS
+        const RIGHT_DELAY = 1000 // 1s
+        const LEFT_DELAY = 4000  // 4s
+
+        // Right Side (Faster)
+        setTimeout(() => {
+            console.log('🚀 Dispatching RIGHT card at', cardRight.position)
+            // We pass [oldRight, oldRight] just to satisfy the reducer's array requirement,
+            // but effectively we are replacing the slot at `oldRight`.
+            // Wait, logic requires we remove the old card.
+            // Dispatch specifically for the Right Card.
+            dispatch({ type: 'REPLACE_CARDS', payload: { oldPositions: [oldRight, oldRight], newCards: [cardRight] } })
+
+            setTimeout(() => {
+                dispatch({ type: 'SET_APPEARING_TO_IDLE', payload: { cardIds: [cardRight.id] } })
+                // Only unlock if left is also done? No, unlock progressively? 
+                // Actually, if we unlock, user might click.
+                // But we don't want to block for 4s.
+                // Let's rely on standard flow.
+            }, APPEAR_ANIMATION_TIME)
+        }, RIGHT_DELAY)
+
+        // Left Side (Slower)
+        setTimeout(() => {
+            console.log('🚀 Dispatching LEFT card at', cardLeft.position)
+            dispatch({ type: 'REPLACE_CARDS', payload: { oldPositions: [oldLeft, oldLeft], newCards: [cardLeft] } })
+
+            setTimeout(() => {
+                dispatch({ type: 'SET_APPEARING_TO_IDLE', payload: { cardIds: [cardLeft.id] } })
+                dispatch({ type: 'UNLOCK_INPUT' })
+            }, APPEAR_ANIMATION_TIME)
+        }, LEFT_DELAY)
+
+    }, [])
+
     // Match Handling
     useEffect(() => {
         if (state.selectedCards.length !== 2) return
@@ -441,15 +555,15 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                 dispatch({ type: 'START_DISAPPEARING', payload: { positions: [pos1, pos2] } })
             }, MATCH_DISPLAY_TIME)
 
-            // Schedule replacement after 4 seconds total
-            const timerId = setTimeout(() => {
-                handleReplacement([pos1, pos2])
-            }, REPLACEMENT_DELAY)
+            // Schedule replacement (internally handles staggered 1s/4s delays)
+            // We need to pass the timer ID for tracking, but since we have multiple timers inside now...
+            // We'll just track the start time.
+            handleStaggeredReplacement([pos1, pos2])
 
             matchedPairsRef.current.push({
                 cardIndices: [pos1, pos2],
                 matchedAt: Date.now(),
-                timerId
+                timerId: setTimeout(() => { }, 0) // Dummy timer ID since we handle it internally now
             })
         } else {
             // Wrong
@@ -459,108 +573,8 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                 dispatch({ type: 'CLEAR_WRONG' })
             }, 1000) // Extended to 1s as requested
         }
-    }, [state.selectedCards])
+    }, [state.selectedCards, handleStaggeredReplacement])
 
-    const handleReplacement = useCallback((oldPositions: [number, number]) => {
-        const currentState = stateRef.current
-
-        // Use the shared position pools to find available spots
-        // These pools contain ALL positions freed up by recent matches
-        const sortedOld = [...oldPositions].sort((a, b) => a - b)
-        const oldLeft = sortedOld[0]
-        const oldRight = sortedOld[1]
-
-        // Get available positions from the shared pools
-        const availableLeft = Array.from(freeLeftPoolRef.current)
-        const availableRight = Array.from(freeRightPoolRef.current)
-
-        // Smart positioning: prefer different positions than our own match
-        const otherLeftPositions = availableLeft.filter(p => p !== oldLeft)
-        const otherRightPositions = availableRight.filter(p => p !== oldRight)
-
-        let posLeft: number
-        let posRight: number
-
-        // Pick a left position (prefer different, fallback to same)
-        if (otherLeftPositions.length > 0) {
-            posLeft = otherLeftPositions[Math.floor(Math.random() * otherLeftPositions.length)]
-            console.log('👈 Picking DIFFERENT left:', posLeft, 'from', otherLeftPositions)
-        } else if (availableLeft.includes(oldLeft)) {
-            posLeft = oldLeft
-            console.log('👈 Fallback LEFT to self:', posLeft)
-        } else if (availableLeft.length > 0) {
-            posLeft = availableLeft[0]
-            console.log('👈 Fallback LEFT to available:', posLeft)
-        } else {
-            posLeft = oldLeft // Ultimate fallback
-            console.log('👈 Ultimate Fallback LEFT:', posLeft)
-        }
-
-        // Pick a right position (prefer different, fallback to same)
-        if (otherRightPositions.length > 0) {
-            posRight = otherRightPositions[Math.floor(Math.random() * otherRightPositions.length)]
-            console.log('👉 Picking DIFFERENT right:', posRight, 'from', otherRightPositions)
-        } else if (availableRight.includes(oldRight)) {
-            posRight = oldRight
-        } else if (availableRight.length > 0) {
-            posRight = availableRight[0]
-        } else {
-            posRight = oldRight // Ultimate fallback
-        }
-
-        // IMPORTANT: Remove selected positions from the pools
-        // This prevents other replacements from using the same spot
-        freeLeftPoolRef.current.delete(posLeft)
-        freeRightPoolRef.current.delete(posRight)
-
-        // Get new pair
-        const currentContent = new Set(currentState.cards.map(c => c.content))
-        const availablePairs = pairsPoolRef.current.filter(p => !currentContent.has(p.question))
-
-        // Fallback if pool exhausted
-        const randomPair = availablePairs.length > 0
-            ? availablePairs[Math.floor(Math.random() * availablePairs.length)]
-            : pairsPoolRef.current[Math.floor(Math.random() * pairsPoolRef.current.length)]
-
-        const newPairId = `pair-${Date.now()}-${Math.random()}`
-
-        const newCards: Card[] = [
-            {
-                id: `card-${newPairId}-left`,
-                pairId: newPairId,
-                content: randomPair.question,
-                type: 'text',
-                position: posLeft,
-                state: 'APPEARING'
-            },
-            {
-                id: `card-${newPairId}-right`,
-                pairId: newPairId,
-                content: randomPair.answer,
-                type: randomPair.type === 'flag' ? 'image' : 'text',
-                position: posRight,
-                state: 'APPEARING'
-            }
-        ]
-
-        console.log('🔄 Replacing cards:', {
-            oldPositions,
-            newPositions: [posLeft, posRight],
-            poolBefore: { left: availableLeft, right: availableRight },
-            newCards: newCards.map(c => ({ id: c.id, position: c.position, content: c.content }))
-        })
-
-        // Remove old cards at oldPositions, add new cards at posLeft/posRight (may be different!)
-        dispatch({ type: 'REPLACE_CARDS', payload: { oldPositions, newCards } })
-
-        setTimeout(() => {
-            dispatch({
-                type: 'SET_APPEARING_TO_IDLE',
-                payload: { cardIds: newCards.map(c => c.id) }
-            })
-            dispatch({ type: 'UNLOCK_INPUT' })
-        }, APPEAR_ANIMATION_TIME)
-    }, [])
 
     const handleCardClick = (position: number) => {
         dispatch({ type: 'SELECT_CARD', payload: { position } })
