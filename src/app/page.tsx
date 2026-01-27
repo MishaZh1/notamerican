@@ -84,6 +84,11 @@ export default function Home() {
             <Award className="w-5 h-5" /> RANKS
           </button>
         </Link>
+
+        {/* Version Number */}
+        <div className="text-center mt-4">
+          <p className="text-xs text-slate-400">v1.0.1</p>
+        </div>
       </div>
     </main>
   )
