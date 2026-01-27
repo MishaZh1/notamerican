@@ -430,9 +430,14 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
             const validLeft = availableLeft.filter(p => !reservedTargetPositionsRef.current.has(p))
             const validRight = availableRight.filter(p => !reservedTargetPositionsRef.current.has(p))
 
+            // Fallback: If no valid positions, use the original positions from this match
+            const oldLeft = oldPositions[0] < 5 ? oldPositions[0] : oldPositions[1]
+            const oldRight = oldPositions[0] >= 5 ? oldPositions[0] : oldPositions[1]
+
             if (validRight.length === 0) {
-                console.log('⚠️ No valid right positions available')
-                return
+                console.log('⚠️ No valid right positions available, using fallback:', oldRight)
+                // Use the original right position as fallback
+                validRight.push(oldRight)
             }
 
             // Pick a random right position
@@ -489,11 +494,9 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                 const validLeft2 = availableLeft2.filter(p => !reservedTargetPositionsRef.current.has(p))
 
                 if (validLeft2.length === 0) {
-                    console.log('⚠️ No valid left positions available')
-                    // Cleanup
-                    reservedTargetPositionsRef.current.delete(posRight)
-                    pendingContentRef.current.delete(randomPair.question)
-                    return
+                    console.log('⚠️ No valid left positions available, using fallback:', oldLeft)
+                    // Use the original left position as fallback
+                    validLeft2.push(oldLeft)
                 }
 
                 // Pick a random left position (creates unpredictable cross-matching!)
