@@ -78,7 +78,7 @@ interface MatchingGameProps {
 const TOTAL_CARDS = 10
 const MATCH_DISPLAY_TIME = 500 // Brief moment to show match success
 const DISAPPEAR_ANIMATION_TIME = 2000 // 2 seconds to disappear
-const REPLACEMENT_DELAY = 4000 // 4 seconds from match to new pair appearing
+const REPLACEMENT_DELAY = 3000 // 3 seconds from match to new pair appearing
 const APPEAR_ANIMATION_TIME = 300 // Time for new cards to appear
 const GAME_DURATION = 90 // 90 seconds
 const GOAL_MATCHES = 40
@@ -414,9 +414,9 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
 
     const handleReplacement = useCallback((oldPositions: [number, number]) => {
         // Schedule the staggered replacement
-        // Right card appears at t+3s, Left card appears at t+4s
-        const RIGHT_DELAY = 3000 // 3s
-        const LEFT_DELAY = 4000 // 4s
+        // Right card appears at t+2s, Left card appears at t+3s
+        const RIGHT_DELAY = 2000 // 2s
+        const LEFT_DELAY = 3000 // 3s
 
         // Right card replacement
         setTimeout(() => {
@@ -534,7 +534,7 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                     pendingContentRef.current.delete(randomPair.question)
                 }, APPEAR_ANIMATION_TIME)
 
-            }, 1000) // 1s after right card = 4s total from match
+            }, 1000) // 1s after right card = 3s total from match
 
         }, RIGHT_DELAY)
 
@@ -553,7 +553,11 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
             return
         }
 
-        if (card1.pairId === card2.pairId) {
+        // Match if pairId matches OR if both cards have the same content (duplicate answers)
+        const isPairMatch = card1.pairId === card2.pairId
+        const isDuplicateMatch = card1.content === card2.content && card1.type === card2.type
+
+        if (isPairMatch || isDuplicateMatch) {
             // Correct - Show match briefly, then start disappearing
             dispatch({ type: 'MATCH_CORRECT', payload: { positions: [pos1, pos2] } })
 
@@ -571,7 +575,7 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                 dispatch({ type: 'START_DISAPPEARING', payload: { positions: [pos1, pos2] } })
             }, MATCH_DISPLAY_TIME)
 
-            // Schedule replacement (internally handles 4s delay)
+            // Schedule replacement (internally handles 3s delay)
             handleReplacement([pos1, pos2])
 
             matchedPairsRef.current.push({

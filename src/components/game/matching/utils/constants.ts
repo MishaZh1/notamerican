@@ -5,7 +5,7 @@
 export const TOTAL_CARDS = 10
 export const MATCH_DISPLAY_TIME = 500 // Brief moment to show match success
 export const DISAPPEAR_ANIMATION_TIME = 2000 // 2 seconds to disappear
-export const REPLACEMENT_DELAY = 4000 // 4 seconds from match to new pair appearing
+export const REPLACEMENT_DELAY = 3000 // 3 seconds from match to new pair appearing
 export const APPEAR_ANIMATION_TIME = 300 // Time for new cards to appear
 export const GAME_DURATION = 90 // 90 seconds
 export const GOAL_MATCHES = 40
