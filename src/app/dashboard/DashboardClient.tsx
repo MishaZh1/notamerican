@@ -130,7 +130,7 @@ export default function DashboardClient({ user, profile, sessions }: DashboardCl
                                 </div>
                                 <div className="text-center sm:text-left flex-1">
                                     <h1 className="text-3xl font-black mb-1">
-                                        {formatName(profile?.display_name, profile?.email)}
+                                        {formatName(profile?.display_name || null, profile?.email || null)}
                                     </h1>
                                     <div className="flex items-center justify-center sm:justify-start gap-2 text-indigo-100 text-sm font-medium mb-4">
                                         <Crown className="w-4 h-4 text-yellow-400" />
