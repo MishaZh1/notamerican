@@ -20,7 +20,7 @@ export async function signInWithEmail(email: string, password: string) {
     return { success: true }
 }
 
-export async function signUpWithEmail(email: string, password: string) {
+export async function signUpWithEmail(email: string, password: string, fullName: string) {
     const supabase = await createClient()
 
     const { error } = await supabase.auth.signUp({
@@ -28,6 +28,10 @@ export async function signUpWithEmail(email: string, password: string) {
         password,
         options: {
             emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+            data: {
+                full_name: fullName,
+                display_name: fullName,
+            }
         },
     })
 

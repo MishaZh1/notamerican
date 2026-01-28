@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { Mail, Lock, LogIn, Loader2 } from "lucide-react"
+import { Mail, Lock, LogIn, Loader2, User as UserIcon, CheckCircle } from "lucide-react"
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from "./actions"
 
 export default function LoginPage() {
@@ -12,24 +12,34 @@ export default function LoginPage() {
     const [isSignUp, setIsSignUp] = useState(false)
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
+    const [fullName, setFullName] = useState("")
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
     const handleEmailAuth = async (e: React.FormEvent) => {
         e.preventDefault()
         setError(null)
+        setSuccessMessage(null)
         setLoading(true)
 
         try {
-            const result = isSignUp
-                ? await signUpWithEmail(email, password)
-                : await signInWithEmail(email, password)
-
-            if (result.error) {
-                setError(result.error)
-            } else if (result.success) {
-                router.push("/dashboard")
-                router.refresh()
+            if (isSignUp) {
+                const result = await signUpWithEmail(email, password, fullName)
+                if (result.error) {
+                    setError(result.error)
+                } else if (result.success) {
+                    setSuccessMessage("Account created! Please check your email to verify your account.")
+                    // Don't redirect yet, let them read the message
+                }
+            } else {
+                const result = await signInWithEmail(email, password)
+                if (result.error) {
+                    setError(result.error)
+                } else if (result.success) {
+                    router.push("/dashboard")
+                    router.refresh()
+                }
             }
         } catch (err) {
             setError("An unexpected error occurred")
@@ -48,7 +58,6 @@ export default function LoginPage() {
                 setError(result.error)
                 setLoading(false)
             } else if (result.url) {
-                // Redirect to Google OAuth
                 window.location.href = result.url
             }
         } catch (err) {
@@ -56,6 +65,28 @@ export default function LoginPage() {
             setError("Failed to sign in with Google")
             setLoading(false)
         }
+    }
+
+    if (successMessage) {
+        return (
+            <main className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+                <div className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 p-8 text-center">
+                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <CheckCircle className="w-10 h-10 text-green-600" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-800 mb-2">Check your email</h2>
+                    <p className="text-slate-600 mb-6">
+                        We've sent a verification link to <span className="font-bold text-slate-800">{email}</span>. Please click the link to activate your account.
+                    </p>
+                    <button
+                        onClick={() => setSuccessMessage(null)}
+                        className="text-blue-600 font-bold hover:underline"
+                    >
+                        Back to Login
+                    </button>
+                </div>
+            </main>
+        )
     }
 
     return (
@@ -81,10 +112,10 @@ export default function LoginPage() {
                         </div>
                     </Link>
                     <h1 className="text-2xl font-bold text-slate-800">
-                        {isSignUp ? "Create Account" : "Welcome Back"}
+                        {isSignUp ? "Join the Challenge" : "Welcome Back"}
                     </h1>
                     <p className="text-slate-600 mt-2">
-                        {isSignUp ? "Join the geography challenge" : "Continue your learning journey"}
+                        {isSignUp ? "Create an account to track your progress" : "Continue your journey to geography mastery"}
                     </p>
                 </div>
 
@@ -99,6 +130,29 @@ export default function LoginPage() {
 
                     {/* Email/Password Form */}
                     <form onSubmit={handleEmailAuth} className="space-y-4">
+
+                        {/* Full Name Input (Sign Up Only) */}
+                        {isSignUp && (
+                            <div>
+                                <label htmlFor="fullName" className="block text-sm font-medium text-slate-700 mb-2">
+                                    Full Name
+                                </label>
+                                <div className="relative">
+                                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                    <input
+                                        id="fullName"
+                                        type="text"
+                                        value={fullName}
+                                        onChange={(e) => setFullName(e.target.value)}
+                                        required={isSignUp}
+                                        disabled={loading}
+                                        placeholder="John Doe"
+                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
                         {/* Email Input */}
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
@@ -159,7 +213,7 @@ export default function LoginPage() {
                             ) : (
                                 <>
                                     <LogIn className="w-5 h-5" />
-                                    {isSignUp ? "Sign Up" : "Sign In"}
+                                    {isSignUp ? "Create Account" : "Sign In"}
                                 </>
                             )}
                         </button>
@@ -210,6 +264,7 @@ export default function LoginPage() {
                             onClick={() => {
                                 setIsSignUp(!isSignUp)
                                 setError(null)
+                                setSuccessMessage(null)
                             }}
                             disabled={loading}
                             className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"

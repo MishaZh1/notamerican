@@ -3,7 +3,7 @@
 import { User } from "@supabase/supabase-js"
 import Link from "next/link"
 import Image from "next/image"
-import { Trophy, Flame, Award, Play, LogOut, Calendar, Target, Crown, CreditCard, Heart } from "lucide-react"
+import { Trophy, Flame, Award, Play, LogOut, Calendar, Target, Crown, CreditCard, Heart, TrendingUp, BarChart3, Globe2 } from "lucide-react"
 import { signOut } from "../login/actions"
 
 interface Profile {
@@ -42,17 +42,49 @@ export default function DashboardClient({ user, profile, sessions }: DashboardCl
         await signOut()
     }
 
+    // Helper: Format Name (First Name + Last Initial)
+    const formatName = (fullName: string | null, email: string | null) => {
+        if (!fullName) return email?.split('@')[0] || "Explorer"
+        const parts = fullName.trim().split(' ')
+        if (parts.length === 1) return parts[0]
+        return `${parts[0]} ${parts[parts.length - 1][0]}.`
+    }
+
+    // Stats Calculation
     const totalGames = sessions.length
     const totalScore = sessions.reduce((acc, s) => acc + s.score, 0)
+    // Approximate accuracy (assuming 10 pts per correct answer usually, but best if we had total questions. We'll use a heuristic or just show Average Score which is safer)
+    // Actually, sessions has `correct_count`. Let's assume typical game has ~20-30 attempts? 
+    // Let's stick to Average Score for reliability unless we fix tracking.
     const avgScore = totalGames > 0 ? Math.round(totalScore / totalGames) : 0
 
+    // Activity Chart Data (Last 7 Days)
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date()
+        d.setDate(d.getDate() - (6 - i))
+        return d.toISOString().split('T')[0]
+    })
+
+    const activityData = last7Days.map(date => {
+        const count = sessions.filter(s => s.started_at.startsWith(date)).length
+        return { date, count }
+    })
+    const maxActivity = Math.max(...activityData.map(d => d.count), 5) // Scale max
+
+    // Rank Logic (Mock)
+    const ranks = ["Rookie", "Explorer", "Navigator", "Cartographer", "Global Master"]
+    const rankIndex = Math.min(Math.floor((profile?.xp_total || 0) / 1000), ranks.length - 1)
+    const currentRank = ranks[rankIndex]
+    const nextRank = ranks[rankIndex + 1] || "Legend"
+    const progressToNext = Math.min(100, (((profile?.xp_total || 0) % 1000) / 1000) * 100)
+
     return (
-        <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4">
-            <div className="max-w-4xl mx-auto">
+        <main className="min-h-screen bg-slate-50 p-4 md:p-8">
+            <div className="max-w-6xl mx-auto space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-8 pt-6">
+                <div className="flex items-center justify-between bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
                     <Link href="/">
-                        <div className="relative w-48 h-12">
+                        <div className="relative w-40 h-10">
                             <Image
                                 src="/logo.png"
                                 alt="Nota Merican"
@@ -64,221 +96,231 @@ export default function DashboardClient({ user, profile, sessions }: DashboardCl
                     </Link>
                     <button
                         onClick={handleSignOut}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/80 hover:bg-white border border-slate-200 rounded-xl text-slate-700 font-medium transition-all shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all font-medium text-sm"
                     >
                         <LogOut className="w-4 h-4" />
-                        Sign Out
+                        <span className="hidden sm:inline">Sign Out</span>
                     </button>
                 </div>
 
-                {/* Profile Card */}
-                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 p-8 mb-6">
-                    <div className="flex items-center gap-6 mb-6">
-                        {/* Avatar */}
-                        <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
-                            {profile?.avatar_url ? (
-                                <Image
-                                    src={profile.avatar_url}
-                                    alt={profile.display_name || "User"}
-                                    fill
-                                    className="object-cover"
-                                />
+                <div className="grid lg:grid-cols-3 gap-6">
+                    {/* LEFT COLUMN: Profile & Stats */}
+                    <div className="lg:col-span-2 space-y-6">
+                        {/* Profile Hero */}
+                        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+
+                            <div className="flex flex-col sm:flex-row items-center gap-6 relative z-10">
+                                <div className="relative">
+                                    <div className="w-24 h-24 rounded-full border-4 border-white/30 bg-white/10 flex items-center justify-center text-3xl font-bold shadow-inner">
+                                        {profile?.avatar_url ? (
+                                            <Image
+                                                src={profile.avatar_url}
+                                                alt="Avatar"
+                                                fill
+                                                className="object-cover rounded-full"
+                                            />
+                                        ) : (
+                                            (profile?.display_name || profile?.email || "U")[0].toUpperCase()
+                                        )}
+                                    </div>
+                                    <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-full border-2 border-indigo-600">
+                                        Lvl {Math.floor((profile?.xp_total || 0) / 500) + 1}
+                                    </div>
+                                </div>
+                                <div className="text-center sm:text-left flex-1">
+                                    <h1 className="text-3xl font-black mb-1">
+                                        {formatName(profile?.display_name, profile?.email)}
+                                    </h1>
+                                    <div className="flex items-center justify-center sm:justify-start gap-2 text-indigo-100 text-sm font-medium mb-4">
+                                        <Crown className="w-4 h-4 text-yellow-400" />
+                                        <span>{currentRank}</span>
+                                        <span className="w-1 h-1 bg-white/40 rounded-full" />
+                                        <span>Joined {new Date(profile?.created_at || user.created_at).toLocaleDateString()}</span>
+                                    </div>
+
+                                    {/* Rank Progress */}
+                                    <div className="w-full bg-black/20 h-3 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)] transition-all duration-1000"
+                                            style={{ width: `${progressToNext}%` }}
+                                        />
+                                    </div>
+                                    <div className="flex justify-between text-xs text-indigo-200 mt-1 font-medium">
+                                        <span>{profile?.xp_total} XP</span>
+                                        <span>Next: {nextRank}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
+                                <div className="w-10 h-10 bg-orange-100 rounded-2xl flex items-center justify-center mb-3">
+                                    <Flame className="w-5 h-5 text-orange-600" />
+                                </div>
+                                <div className="text-3xl font-black text-slate-800">{profile?.streak_current || 0}</div>
+                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">Day Streak</div>
+                            </div>
+                            <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
+                                <div className="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center mb-3">
+                                    <Target className="w-5 h-5 text-blue-600" />
+                                </div>
+                                <div className="text-3xl font-black text-slate-800">{totalGames}</div>
+                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">Games Played</div>
+                            </div>
+                            <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
+                                <div className="w-10 h-10 bg-purple-100 rounded-2xl flex items-center justify-center mb-3">
+                                    <Trophy className="w-5 h-5 text-purple-600" />
+                                </div>
+                                <div className="text-3xl font-black text-slate-800">{profile?.streak_best || 0}</div>
+                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">Best Streak</div>
+                            </div>
+                            <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
+                                <div className="w-10 h-10 bg-green-100 rounded-2xl flex items-center justify-center mb-3">
+                                    <TrendingUp className="w-5 h-5 text-green-600" />
+                                </div>
+                                <div className="text-3xl font-black text-slate-800">{avgScore}</div>
+                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">Avg Score</div>
+                            </div>
+                        </div>
+
+                        {/* Recent History */}
+                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                    <Calendar className="w-5 h-5 text-slate-400" />
+                                    Recent Activity
+                                </h2>
+                                <Link href="/play" className="text-indigo-600 font-bold text-sm hover:underline">
+                                    Play New Game
+                                </Link>
+                            </div>
+
+                            {sessions.length === 0 ? (
+                                <div className="text-center py-8 text-slate-400 italic">No games played yet. Start your journey!</div>
                             ) : (
-                                <span>{(profile?.display_name || profile?.email || "U")[0].toUpperCase()}</span>
+                                <div className="space-y-4">
+                                    {sessions.slice(0, 5).map((session) => (
+                                        <div key={session.id} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-xl transition-colors border border-transparent hover:border-slate-100">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex flex-col items-center justify-center font-bold">
+                                                    <span className="text-xs uppercase opacity-70">SCR</span>
+                                                    <span>{session.score}</span>
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-slate-700">Match Madness</div>
+                                                    <div className="text-xs text-slate-400">
+                                                        {new Date(session.started_at).toLocaleDateString()} • {Math.round(session.duration_ms / 1000)}s
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="font-bold text-green-600">+{Math.round(session.score / 10)} XP</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
-
-                        {/* User Info */}
-                        <div className="flex-1">
-                            <h1 className="text-3xl font-bold text-slate-800 mb-1">
-                                {profile?.display_name || profile?.username || "Geography Explorer"}
-                            </h1>
-                            <p className="text-slate-600">{profile?.email || user.email}</p>
-                            <div className="flex items-center gap-4 mt-3">
-                                <div className="flex items-center gap-1 text-sm text-slate-500">
-                                    <Calendar className="w-4 h-4" />
-                                    Joined {new Date(profile?.created_at || user.created_at).toLocaleDateString()}
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {/* XP */}
-                        <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-4 border border-yellow-200">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Trophy className="w-5 h-5 text-yellow-600" />
-                                <span className="text-sm font-medium text-yellow-800">Total XP</span>
-                            </div>
-                            <p className="text-3xl font-bold text-yellow-900">{profile?.xp_total || 0}</p>
-                        </div>
-
-                        {/* Current Streak */}
-                        <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-4 border border-orange-200">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Flame className="w-5 h-5 text-orange-600" />
-                                <span className="text-sm font-medium text-orange-800">Streak</span>
-                            </div>
-                            <p className="text-3xl font-bold text-orange-900">{profile?.streak_current || 0}</p>
-                        </div>
-
-                        {/* Best Streak */}
-                        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-200">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Award className="w-5 h-5 text-purple-600" />
-                                <span className="text-sm font-medium text-purple-800">Best Streak</span>
-                            </div>
-                            <p className="text-3xl font-bold text-purple-900">{profile?.streak_best || 0}</p>
-                        </div>
-
-                        {/* Games Played */}
-                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Target className="w-5 h-5 text-blue-600" />
-                                <span className="text-sm font-medium text-blue-800">Games</span>
-                            </div>
-                            <p className="text-3xl font-bold text-blue-900">{totalGames}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Membership & Hearts */}
-                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 p-8 mb-6">
-                    <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                        <Crown className="w-6 h-6 text-indigo-600" />
-                        Membership & Hearts
-                    </h2>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                        {/* Subscription Status */}
-                        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                                    <CreditCard className="w-5 h-5" />
-                                    Plan
-                                </h3>
-                                {profile?.subscription_tier && profile.subscription_tier !== 'free' ? (
-                                    <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold uppercase rounded-full">
-                                        Premium
-                                    </span>
-                                ) : (
-                                    <span className="px-3 py-1 bg-slate-200 text-slate-600 text-xs font-bold uppercase rounded-full">
-                                        Free
-                                    </span>
-                                )}
-                            </div>
-
-                            <p className="text-slate-600 mb-6">
-                                {profile?.subscription_tier === 'premium_monthly' && "Premium Monthly Plan - Unlimited Hearts"}
-                                {profile?.subscription_tier === 'premium_yearly' && "Premium Yearly Plan - Unlimited Hearts"}
-                                {(!profile?.subscription_tier || profile.subscription_tier === 'free') && "Free Plan - Limited daily hearts"}
-                            </p>
-
-                            <div className="flex gap-2">
-                                {profile?.subscription_tier && profile.subscription_tier !== 'free' ? (
-                                    <button
-                                        onClick={() => window.open('https://billing.stripe.com/p/login/test', '_blank')}
-                                        className="w-full py-2 bg-white border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
-                                    >
-                                        Manage Subscription
-                                    </button>
-                                ) : (
-                                    <Link href="/pricing" className="w-full">
-                                        <button className="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md">
-                                            Upgrade to Premium
-                                        </button>
-                                    </Link>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Heart Packs */}
-                        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                                    <Heart className="w-5 h-5 text-red-500 fill-red-500" />
-                                    Heart Packs
-                                </h3>
-                                <span className="text-2xl font-black text-slate-900">
-                                    {profile?.heart_packs_owned || 0}
-                                </span>
-                            </div>
-
-                            <p className="text-slate-600 mb-6">
-                                Extra hearts for when you run out. Use them to keep playing immediately.
-                            </p>
-
-                            <Link href="/pricing" className="w-full">
-                                <button className="w-full py-2 bg-white border-2 border-red-100 text-red-600 font-semibold rounded-xl hover:bg-red-50 hover:border-red-200 transition-colors">
-                                    Buy More Hearts
-                                </button>
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Recent Games */}
-                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 p-8 mb-6">
-                    <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                        <Trophy className="w-6 h-6 text-yellow-600" />
-                        Recent Games
-                    </h2>
-
-                    {sessions.length === 0 ? (
-                        <div className="text-center py-12">
-                            <div className="w-24 h-24 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center">
-                                <Play className="w-12 h-12 text-slate-400" />
-                            </div>
-                            <p className="text-slate-600 mb-4">No games played yet</p>
-                            <Link href="/play">
-                                <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 transition-all">
-                                    Play Your First Game
-                                </button>
-                            </Link>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {sessions.map((session, index) => (
-                                <div
-                                    key={session.id}
-                                    className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                                            #{index + 1}
+                    {/* RIGHT COLUMN: Charts & Status */}
+                    <div className="space-y-6">
+                        {/* Status Card */}
+                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <Globe2 className="w-5 h-5 text-indigo-500" />
+                                Weekly Activity
+                            </h3>
+                            <div className="h-40 flex items-end justify-between gap-2">
+                                {activityData.map((d, i) => (
+                                    <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                                        <div className="w-full bg-slate-100 rounded-t-lg relative h-32 overflow-hidden flex items-end">
+                                            <div
+                                                className="w-full bg-indigo-500 group-hover:bg-indigo-600 transition-all rounded-t-lg"
+                                                style={{ height: `${(d.count / maxActivity) * 100}%` }}
+                                            />
                                         </div>
-                                        <div>
-                                            <p className="font-semibold text-slate-800">
-                                                Score: {session.score} ({session.correct_count} correct)
-                                            </p>
-                                            <p className="text-sm text-slate-500">
-                                                {new Date(session.started_at).toLocaleDateString()} •{" "}
-                                                {Math.round(session.duration_ms / 1000)}s
-                                            </p>
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase">
+                                            {new Date(d.date).toLocaleDateString('en-US', { weekday: 'narrow' })}
                                         </div>
                                     </div>
-                                    <div className="text-2xl font-bold text-blue-600">{session.score}</div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
-                    )}
-                </div>
 
-                {/* Action Buttons */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Link href="/play" className="block">
-                        <button className="w-full h-16 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-xl rounded-2xl shadow-lg shadow-green-500/30 transition-all flex items-center justify-center gap-2">
-                            <Play className="w-6 h-6 fill-current" />
-                            Play Now
-                        </button>
-                    </Link>
-                    <Link href="/leaderboard" className="block">
-                        <button className="w-full h-16 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold text-xl rounded-2xl shadow-lg shadow-yellow-500/30 transition-all flex items-center justify-center gap-2">
-                            <Award className="w-6 h-6" />
-                            Leaderboard
-                        </button>
-                    </Link>
+                        {/* Global Rank (Mock) */}
+                        <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -mr-8 -mt-8" />
+                            <h3 className="font-bold text-slate-300 mb-1 flex items-center gap-2">
+                                <BarChart3 className="w-4 h-4" />
+                                Global Ranking
+                            </h3>
+                            <div className="flex items-end gap-2 mb-2">
+                                <span className="text-4xl font-black text-white">#1,420</span>
+                                <span className="text-green-400 text-sm font-bold mb-1">Top 15%</span>
+                            </div>
+                            <p className="text-xs text-slate-400 mb-4">You're doing better than 85% of players this week!</p>
+                            <Link href="/leaderboard">
+                                <button className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold transition-all border border-white/10">
+                                    View Leaderboard
+                                </button>
+                            </Link>
+                        </div>
+
+                        {/* Subscription & Hearts */}
+                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                                        <Heart className="w-5 h-5 text-red-500 fill-red-500" />
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-slate-800">Hearts</div>
+                                        <div className="text-xs text-slate-500">
+                                            {profile?.heart_packs_owned || 0} packs available
+                                        </div>
+                                    </div>
+                                </div>
+                                <Link href="/pricing" className="bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-red-100 transition-colors">
+                                    + ADD
+                                </Link>
+                            </div>
+
+                            <hr className="border-slate-100 my-4" />
+
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center">
+                                        <CreditCard className="w-5 h-5 text-indigo-600" />
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-slate-800">Plan</div>
+                                        <div className="text-xs text-slate-500 capitalize">
+                                            {(profile?.subscription_tier || 'free').replace('_', ' ')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {(!profile?.subscription_tier || profile.subscription_tier === 'free') ? (
+                                <Link href="/pricing">
+                                    <button className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all text-sm">
+                                        Upgrade to Premium
+                                    </button>
+                                </Link>
+                            ) : (
+                                <button
+                                    onClick={() => window.open('https://billing.stripe.com/p/login/test', '_blank')}
+                                    className="w-full py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm"
+                                >
+                                    Manage Subscription
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>

@@ -27,7 +27,7 @@ export default async function DashboardPage() {
         .select("*")
         .eq("user_id", user.id)
         .order("started_at", { ascending: false })
-        .limit(10)
+        .limit(50)
 
     return <DashboardClient user={user} profile={profile} sessions={sessions || []} />
 }
