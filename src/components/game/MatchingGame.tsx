@@ -654,10 +654,10 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
             transition: { duration: 0.4 }
         },
         DISAPPEARING: {
-            opacity: 0.15, // Subtle shadow/frame remains visible
+            opacity: 0, // Fully disappear
             scale: 0.95,
             y: 0,
-            transition: { duration: 2, ease: "easeInOut" } // Slow 2s fade
+            transition: { duration: 0.5, ease: "easeInOut" } // Faster fade
         },
         APPEARING: {
             opacity: 1,
