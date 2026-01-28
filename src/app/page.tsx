@@ -87,7 +87,7 @@ export default function Home() {
 
         {/* Version Number */}
         <div className="text-center mt-4">
-          <p className="text-xs text-slate-400">v1.0.2</p>
+          <p className="text-xs text-slate-400">v1.0.3</p>
         </div>
       </div>
     </main>
