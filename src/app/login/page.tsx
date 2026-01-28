@@ -47,9 +47,12 @@ export default function LoginPage() {
             if (result.error) {
                 setError(result.error)
                 setLoading(false)
+            } else if (result.url) {
+                // Redirect to Google OAuth
+                window.location.href = result.url
             }
-            // If successful, user will be redirected by Supabase
         } catch (err) {
+            console.error(err)
             setError("Failed to sign in with Google")
             setLoading(false)
         }

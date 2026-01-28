@@ -54,7 +54,7 @@ export async function signInWithGoogle() {
     }
 
     if (data.url) {
-        redirect(data.url) // Redirect to Google OAuth
+        return { success: true, url: data.url }
     }
 
     return { success: true }
