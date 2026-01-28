@@ -16,6 +16,22 @@ export const TOP_CAPITALS = [
     { country: "Egypt", capital: "Cairo", continent: "Africa", emoji: "🇪🇬" },
     { country: "South Africa", capital: "Pretoria", continent: "Africa", emoji: "🇿🇦" },
     { country: "Mexico", capital: "Mexico City", continent: "North America", emoji: "🇲🇽" },
+
+    // Central America
+    { country: "Guatemala", capital: "Guatemala City", continent: "North America", emoji: "🇬🇹" },
+    { country: "Belize", capital: "Belmopan", continent: "North America", emoji: "🇧🇿" },
+    { country: "Honduras", capital: "Tegucigalpa", continent: "North America", emoji: "🇭🇳" },
+    { country: "El Salvador", capital: "San Salvador", continent: "North America", emoji: "🇸🇻" },
+    { country: "Nicaragua", capital: "Managua", continent: "North America", emoji: "🇳🇮" },
+    { country: "Costa Rica", capital: "San José", continent: "North America", emoji: "🇨🇷" },
+    { country: "Panama", capital: "Panama City", continent: "North America", emoji: "🇵🇦" },
+
+    // Caribbean
+    { country: "Cuba", capital: "Havana", continent: "North America", emoji: "🇨🇺" },
+    { country: "Jamaica", capital: "Kingston", continent: "North America", emoji: "🇯🇲" },
+    { country: "Haiti", capital: "Port-au-Prince", continent: "North America", emoji: "🇭🇹" },
+    { country: "Dominican Republic", capital: "Santo Domingo", continent: "North America", emoji: "🇩🇴" },
+
     { country: "Turkey", capital: "Ankara", continent: "Asia", emoji: "🇹🇷" },
     { country: "Indonesia", capital: "Jakarta", continent: "Asia", emoji: "🇮🇩" },
     { country: "Saudi Arabia", capital: "Riyadh", continent: "Asia", emoji: "🇸🇦" },
