@@ -26,7 +26,7 @@ export default function MatchPage() {
     const [selectedContinent, setSelectedContinent] = useState("All")
     const [gameKey, setGameKey] = useState(0)
     const [currentScore, setCurrentScore] = useState(0)
-    const [lives, setLives] = useState(5)
+    const [lives, setLives] = useState(3)
     const [gameStats, setGameStats] = useState({ matches: 0, combo: 0, maxCombo: 0 })
 
     // Monetization State
@@ -94,7 +94,7 @@ export default function MatchPage() {
 
         setGameKey(prev => prev + 1)
         setCurrentScore(0)
-        setLives(5)
+        setLives(3)
     }, [selectedContinent, allPairs])
 
 
