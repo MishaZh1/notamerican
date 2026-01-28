@@ -726,9 +726,9 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
 
                 {/* Timer */}
                 <div className="flex flex-col items-end w-1/3">
-                    <div className="flex items-center gap-1 text-slate-800">
+                    <div className="flex items-center gap-1">
                         <Timer className="w-4 h-4 text-slate-400" />
-                        <span className={cn("text-xl font-black font-mono", state.timeLeft < 10 && "text-red-500 animate-pulse")}>
+                        <span className={cn("text-xl font-black font-mono", state.timeLeft < 10 ? "text-red-500 animate-pulse" : "text-slate-800")}>
                             {Math.floor(state.timeLeft / 60)}:{String(state.timeLeft % 60).padStart(2, '0')}
                         </span>
                     </div>
