@@ -546,10 +546,10 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
             if (onWrongMatch) onWrongMatch()
             dispatch({ type: 'MATCH_WRONG', payload: { positions: [pos1, pos2] } })
 
-            // Unlock input quickly after shake animation (400ms) so player can continue
+            // Unlock input quickly after shake animation (250ms) so player can continue
             setTimeout(() => {
                 dispatch({ type: 'UNLOCK_INPUT' })
-            }, 400)
+            }, 250)
 
             // Clear red color after 1 second
             setTimeout(() => {
@@ -726,7 +726,7 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                                         variants={cardVariants}
                                         initial="HIDDEN"
                                         animate={card.state}
-                                        // We don't need exit because we handle DISAPPEARING state manually
+                                        exit="HIDDEN"
                                         onClick={() => handleCardClick(card.position)}
                                         className={getCardClass(card)}
                                     >
@@ -752,6 +752,7 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                                         variants={cardVariants}
                                         initial="HIDDEN"
                                         animate={card.state}
+                                        exit="HIDDEN"
                                         onClick={() => handleCardClick(card.position)}
                                         className={getCardClass(card)}
                                     >
