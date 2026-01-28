@@ -1,10 +1,13 @@
 import Stripe from 'stripe'
 
-if (!process.env.STRIPE_SANDBOX_SECRET_KEY) {
-    throw new Error('STRIPE_SANDBOX_SECRET_KEY is not set in environment variables')
+const apiKey = process.env.STRIPE_SANDBOX_SECRET_KEY
+
+if (!apiKey) {
+    console.warn('⚠️ STRIPE_SANDBOX_SECRET_KEY is not set. Using dummy key for build/development only.')
+    // This allows the build to pass but will fail at runtime if not set
 }
 
-export const stripe = new Stripe(process.env.STRIPE_SANDBOX_SECRET_KEY, {
+export const stripe = new Stripe(apiKey || 'sk_test_dummy', {
     apiVersion: '2025-12-15.clover',
     typescript: true,
 })
