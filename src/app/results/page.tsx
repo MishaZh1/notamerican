@@ -199,8 +199,11 @@ function ResultsContent() {
                                 </p>
 
                                 <div className="space-y-3">
-                                    <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 text-lg">
-                                        Start Free Trial
+                                    <Button
+                                        onClick={() => router.push('/pricing')}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 text-lg"
+                                    >
+                                        View Plans & Pricing
                                     </Button>
                                     <Button variant="ghost" className="text-slate-400 btn-sm" onClick={() => setShowSubscription(false)}>
                                         Maybe later

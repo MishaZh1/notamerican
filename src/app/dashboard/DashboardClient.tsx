@@ -3,7 +3,7 @@
 import { User } from "@supabase/supabase-js"
 import Link from "next/link"
 import Image from "next/image"
-import { Trophy, Flame, Award, Play, LogOut, Calendar, Target } from "lucide-react"
+import { Trophy, Flame, Award, Play, LogOut, Calendar, Target, Crown, CreditCard, Heart } from "lucide-react"
 import { signOut } from "../login/actions"
 
 interface Profile {
@@ -17,6 +17,9 @@ interface Profile {
     streak_best: number
     last_active_date: string | null
     created_at: string
+    subscription_tier?: 'free' | 'premium_monthly' | 'premium_yearly'
+    subscription_expires_at?: string | null
+    heart_packs_owned?: number
 }
 
 interface Session {
@@ -136,6 +139,81 @@ export default function DashboardClient({ user, profile, sessions }: DashboardCl
                                 <span className="text-sm font-medium text-blue-800">Games</span>
                             </div>
                             <p className="text-3xl font-bold text-blue-900">{totalGames}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Membership & Hearts */}
+                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 p-8 mb-6">
+                    <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                        <Crown className="w-6 h-6 text-indigo-600" />
+                        Membership & Hearts
+                    </h2>
+
+                    <div className="grid md:grid-cols-2 gap-6">
+                        {/* Subscription Status */}
+                        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                                    <CreditCard className="w-5 h-5" />
+                                    Plan
+                                </h3>
+                                {profile?.subscription_tier && profile.subscription_tier !== 'free' ? (
+                                    <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold uppercase rounded-full">
+                                        Premium
+                                    </span>
+                                ) : (
+                                    <span className="px-3 py-1 bg-slate-200 text-slate-600 text-xs font-bold uppercase rounded-full">
+                                        Free
+                                    </span>
+                                )}
+                            </div>
+
+                            <p className="text-slate-600 mb-6">
+                                {profile?.subscription_tier === 'premium_monthly' && "Premium Monthly Plan - Unlimited Hearts"}
+                                {profile?.subscription_tier === 'premium_yearly' && "Premium Yearly Plan - Unlimited Hearts"}
+                                {(!profile?.subscription_tier || profile.subscription_tier === 'free') && "Free Plan - Limited daily hearts"}
+                            </p>
+
+                            <div className="flex gap-2">
+                                {profile?.subscription_tier && profile.subscription_tier !== 'free' ? (
+                                    <button
+                                        onClick={() => window.open('https://billing.stripe.com/p/login/test', '_blank')}
+                                        className="w-full py-2 bg-white border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
+                                    >
+                                        Manage Subscription
+                                    </button>
+                                ) : (
+                                    <Link href="/pricing" className="w-full">
+                                        <button className="w-full py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md">
+                                            Upgrade to Premium
+                                        </button>
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Heart Packs */}
+                        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                                    <Heart className="w-5 h-5 text-red-500 fill-red-500" />
+                                    Heart Packs
+                                </h3>
+                                <span className="text-2xl font-black text-slate-900">
+                                    {profile?.heart_packs_owned || 0}
+                                </span>
+                            </div>
+
+                            <p className="text-slate-600 mb-6">
+                                Extra hearts for when you run out. Use them to keep playing immediately.
+                            </p>
+
+                            <Link href="/pricing" className="w-full">
+                                <button className="w-full py-2 bg-white border-2 border-red-100 text-red-600 font-semibold rounded-xl hover:bg-red-50 hover:border-red-200 transition-colors">
+                                    Buy More Hearts
+                                </button>
+                            </Link>
                         </div>
                     </div>
                 </div>
