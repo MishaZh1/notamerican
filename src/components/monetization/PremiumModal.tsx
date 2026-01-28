@@ -54,7 +54,7 @@ export function PremiumModal({ isOpen, onClose, type, timeRemaining = 0 }: Premi
             if (sessionId) {
                 const stripe = await loadStripe(STRIPE_PUBLISHABLE_KEY!)
                 if (stripe) {
-                    await stripe.redirectToCheckout({ sessionId })
+                    await (stripe as any).redirectToCheckout({ sessionId })
                 }
             }
         } catch (error) {
