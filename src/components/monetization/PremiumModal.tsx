@@ -53,7 +53,9 @@ export function PremiumModal({ isOpen, onClose, type, timeRemaining = 0 }: Premi
             const { sessionId } = await response.json()
             if (sessionId) {
                 const stripe = await loadStripe(STRIPE_PUBLISHABLE_KEY!)
-                stripe?.redirectToCheckout({ sessionId })
+                if (stripe) {
+                    await stripe.redirectToCheckout({ sessionId })
+                }
             }
         } catch (error) {
             console.error("Checkout failed", error)
