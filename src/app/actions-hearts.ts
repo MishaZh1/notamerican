@@ -113,18 +113,23 @@ export async function canPlayGame(userId: string | null) {
         return { canPlay: true, reason: null }
     }
 
-    // Check daily limit (10 games per day for free users)
-    const DAILY_LIMIT = 10
+    // Check daily limit (3 games per day for free users)
+    const DAILY_LIMIT = 3
     if (userData.games_played_today >= DAILY_LIMIT) {
+        const now = new Date()
+        const resetTime = userData.daily_limit_reset_at ? new Date(userData.daily_limit_reset_at) : new Date(now.setHours(24, 0, 0, 0))
+        const timeRemaining = Math.max(0, resetTime.getTime() - Date.now())
+
         return {
             canPlay: false,
             reason: 'daily_limit_reached',
             gamesPlayedToday: userData.games_played_today,
-            dailyLimit: DAILY_LIMIT
+            dailyLimit: DAILY_LIMIT,
+            timeRemaining // in ms
         }
     }
 
-    return { canPlay: true, reason: null }
+    return { canPlay: true, reason: null, gamesPlayedToday: userData.games_played_today, dailyLimit: DAILY_LIMIT }
 }
 
 /**
