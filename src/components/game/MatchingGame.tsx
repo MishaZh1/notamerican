@@ -305,6 +305,7 @@ function gameReducer(state: GameState, action: Action): GameState {
         case 'RESET_SELECTION':
             return {
                 ...state,
+                isProcessing: false, // ENSURE INPUT IS UNLOCKED
                 selectedCards: [],
                 cards: state.cards.map(c =>
                     c.state === 'SELECTED' ? { ...c, state: 'IDLE' } : c
@@ -413,41 +414,21 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
     }, [pairs])
 
     const handleReplacement = useCallback((oldPositions: [number, number]) => {
-        // Schedule the staggered replacement
+        // Schedule replacements
         // Right card appears at t+2s, Left card appears at t+3s
+        // We now enforce STRICT position reuse to prevent "ghost cards" logic errors
+
         const RIGHT_DELAY = 2000 // 2s
         const LEFT_DELAY = 3000 // 3s
 
+        // Identify which position is left (0-4) and right (5-9)
+        const oldLeft = oldPositions[0] < 5 ? oldPositions[0] : oldPositions[1]
+        const oldRight = oldPositions[0] >= 5 ? oldPositions[0] : oldPositions[1]
+
         // Right card replacement
         setTimeout(() => {
+            // Generate content
             const currentState = stateRef.current
-
-            // Get all available positions
-            const availableLeft = Array.from(freeLeftPoolRef.current)
-            const availableRight = Array.from(freeRightPoolRef.current)
-
-            // Filter out reserved positions
-            const validLeft = availableLeft.filter(p => !reservedTargetPositionsRef.current.has(p))
-            const validRight = availableRight.filter(p => !reservedTargetPositionsRef.current.has(p))
-
-            // Fallback: If no valid positions, use the original positions from this match
-            const oldLeft = oldPositions[0] < 5 ? oldPositions[0] : oldPositions[1]
-            const oldRight = oldPositions[0] >= 5 ? oldPositions[0] : oldPositions[1]
-
-            if (validRight.length === 0) {
-                console.log('⚠️ No valid right positions available, using fallback:', oldRight)
-                // Use the original right position as fallback
-                validRight.push(oldRight)
-            }
-
-            // Pick a random right position
-            const posRight = validRight[Math.floor(Math.random() * validRight.length)]
-
-            // Reserve and consume
-            freeRightPoolRef.current.delete(posRight)
-            reservedTargetPositionsRef.current.add(posRight)
-
-            // Generate content for the right card
             const currentContent = new Set(currentState.cards.map(c => c.content))
             const pendingContent = pendingContentRef.current
 
@@ -460,23 +441,22 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                 : pairsPoolRef.current[Math.floor(Math.random() * pairsPoolRef.current.length)]
 
             pendingContentRef.current.add(randomPair.question)
-
             const newPairId = `pair-${Date.now()}-${Math.random()}`
 
+            // RIGHT CARD
             const cardRight: Card = {
                 id: `card-${newPairId}-right`,
                 pairId: newPairId,
                 content: randomPair.answer,
                 type: randomPair.type === 'flag' ? 'image' : 'text',
-                position: posRight,
+                position: oldRight, // Strict Position
                 state: 'APPEARING'
             }
 
-            console.log('🚀 RIGHT card at', posRight, 'pairId:', newPairId)
             dispatch({
                 type: 'REPLACE_CARDS',
                 payload: {
-                    oldPositions: [posRight, posRight],
+                    oldPositions: [oldRight, oldRight], // Target itself
                     newCards: [cardRight]
                 }
             })
@@ -485,41 +465,21 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                 dispatch({ type: 'SET_APPEARING_TO_IDLE', payload: { cardIds: [cardRight.id] } })
             }, APPEAR_ANIMATION_TIME)
 
-            // Schedule LEFT card 1 second later (at t+4s total)
+            // LEFT CARD (Delayed)
             setTimeout(() => {
-                const currentState2 = stateRef.current
-
-                // Get available left positions again (might have changed)
-                const availableLeft2 = Array.from(freeLeftPoolRef.current)
-                const validLeft2 = availableLeft2.filter(p => !reservedTargetPositionsRef.current.has(p))
-
-                if (validLeft2.length === 0) {
-                    console.log('⚠️ No valid left positions available, using fallback:', oldLeft)
-                    // Use the original left position as fallback
-                    validLeft2.push(oldLeft)
-                }
-
-                // Pick a random left position (creates unpredictable cross-matching!)
-                const posLeft = validLeft2[Math.floor(Math.random() * validLeft2.length)]
-
-                // Reserve and consume
-                freeLeftPoolRef.current.delete(posLeft)
-                reservedTargetPositionsRef.current.add(posLeft)
-
                 const cardLeft: Card = {
                     id: `card-${newPairId}-left`,
                     pairId: newPairId,
                     content: randomPair.question,
                     type: 'text',
-                    position: posLeft,
+                    position: oldLeft, // Strict Position
                     state: 'APPEARING'
                 }
 
-                console.log('🚀 LEFT card at', posLeft, '→ NEW PAIR:', posLeft, '-', posRight)
                 dispatch({
                     type: 'REPLACE_CARDS',
                     payload: {
-                        oldPositions: [posLeft, posLeft],
+                        oldPositions: [oldLeft, oldLeft], // Target itself
                         newCards: [cardLeft]
                     }
                 })
@@ -528,13 +488,11 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                     dispatch({ type: 'SET_APPEARING_TO_IDLE', payload: { cardIds: [cardLeft.id] } })
                     dispatch({ type: 'UNLOCK_INPUT' })
 
-                    // Cleanup locks
-                    reservedTargetPositionsRef.current.delete(posLeft)
-                    reservedTargetPositionsRef.current.delete(posRight)
+                    // Cleanup
                     pendingContentRef.current.delete(randomPair.question)
                 }, APPEAR_ANIMATION_TIME)
 
-            }, 1000) // 1s after right card = 3s total from match
+            }, 1000) // 1s after right card
 
         }, RIGHT_DELAY)
 
