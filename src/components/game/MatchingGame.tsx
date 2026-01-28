@@ -42,7 +42,10 @@ interface GameState {
     timeLeft: number
     occupiedPositions: Set<number>
     isProcessing: boolean // NEW: Blocks input during animations
+    gameId: string // NEW: Prevents async race conditions from previous games
 }
+
+// ...
 
 export interface GameStats {
     score: number
@@ -100,7 +103,8 @@ function gameReducer(state: GameState, action: Action): GameState {
                 maxCombo: 0,
                 totalMatches: 0,
                 isProcessing: false,
-                selectedCards: [] // Ensure clean slate
+                selectedCards: [], // Ensure clean slate
+                gameId: `game-${Date.now()}` // Unique ID for this session
             }
 
         case 'START_PLAYING':
@@ -333,7 +337,8 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
         score: 0,
         timeLeft: GAME_DURATION,
         occupiedPositions: new Set<number>(),
-        isProcessing: false
+        isProcessing: false,
+        gameId: 'init'
     })
 
     const stateRef = useRef(state)
@@ -425,8 +430,14 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
         const oldLeft = oldPositions[0] < 5 ? oldPositions[0] : oldPositions[1]
         const oldRight = oldPositions[0] >= 5 ? oldPositions[0] : oldPositions[1]
 
+        // Capture current game ID when replacement is scheduled
+        const scheduledGameId = stateRef.current.gameId
+
         // Right card replacement
         setTimeout(() => {
+            // CHECK: Is this still the same game?
+            if (stateRef.current.gameId !== scheduledGameId) return
+
             // Generate content
             const currentState = stateRef.current
             const currentContent = new Set(currentState.cards.map(c => c.content))
@@ -462,11 +473,14 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
             })
 
             setTimeout(() => {
+                if (stateRef.current.gameId !== scheduledGameId) return
                 dispatch({ type: 'SET_APPEARING_TO_IDLE', payload: { cardIds: [cardRight.id] } })
             }, APPEAR_ANIMATION_TIME)
 
             // LEFT CARD (Delayed)
             setTimeout(() => {
+                if (stateRef.current.gameId !== scheduledGameId) return
+
                 const cardLeft: Card = {
                     id: `card-${newPairId}-left`,
                     pairId: newPairId,
@@ -485,6 +499,7 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                 })
 
                 setTimeout(() => {
+                    if (stateRef.current.gameId !== scheduledGameId) return
                     dispatch({ type: 'SET_APPEARING_TO_IDLE', payload: { cardIds: [cardLeft.id] } })
                     dispatch({ type: 'UNLOCK_INPUT' })
 
