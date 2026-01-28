@@ -144,7 +144,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
     // Update subscription status
     const isActive = subscription.status === 'active'
-    const expiresAt = new Date(subscription.current_period_end * 1000)
+    const expiresAt = new Date((subscription as any).current_period_end * 1000)
 
     await supabase
         .from('users')

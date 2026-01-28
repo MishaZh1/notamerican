@@ -21,7 +21,7 @@ if (!key) {
 }
 
 const stripe = new Stripe(key, {
-    apiVersion: '2024-12-18.acacia', // Updated to match client.ts
+    apiVersion: '2025-12-15.clover', // Updated to match installed types
 })
 
 const PRODUCTS = [
