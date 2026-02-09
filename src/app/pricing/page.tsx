@@ -1,37 +1,49 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import Image from "next/image"
 import Link from "next/link"
-import { Check, Heart, Loader2, Star, Zap, ArrowLeft } from "lucide-react"
+import { ArrowLeft, Check, ShieldCheck, Star } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { StripePriceKey } from "@/lib/stripe/client"
 import { createClient } from "@/lib/supabase/client"
-
-interface PricingCardProps {
-    title: string
-    price: string
-    interval?: string
-    description: string
-    features: string[]
-    priceKey: StripePriceKey
-    popular?: boolean
-    gradient?: string
-}
+import { Button } from "@/components/ui/button"
 
 export default function PricingPage() {
     const router = useRouter()
-    const [loadingKey, setLoadingKey] = useState<StripePriceKey | null>(null)
+    const [selectedPlan, setSelectedPlan] = useState<'starter' | 'monthly' | 'yearly'>('monthly')
+    const [timeLeft, setTimeLeft] = useState(9 * 60 * 1000 + 45000) // 9:45 default
 
-    const handleCheckout = async (priceKey: StripePriceKey) => {
-        setLoadingKey(priceKey)
+    // Countdown Timer
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setTimeLeft(prev => Math.max(0, prev - 1000))
+        }, 1000)
+        return () => clearInterval(timer)
+    }, [])
+
+    const formatTime = (ms: number) => {
+        const totalSeconds = Math.floor(ms / 1000)
+        const minutes = Math.floor(totalSeconds / 60)
+        const seconds = totalSeconds % 60
+        return { minutes, seconds }
+    }
+
+    const t = formatTime(timeLeft)
+
+    const handleCheckout = async () => {
+        let priceKey: StripePriceKey = 'PREMIUM_MONTHLY'
+        switch (selectedPlan) {
+            case 'starter': priceKey = 'HEART_PACK_20'; break;
+            case 'monthly': priceKey = 'PREMIUM_MONTHLY'; break;
+            case 'yearly': priceKey = 'PREMIUM_YEARLY'; break;
+        }
+
         try {
             const supabase = createClient()
             const { data: { user } } = await supabase.auth.getUser()
 
             if (!user) {
-                // Save checkout intent and redirect to login
                 sessionStorage.setItem('pending_checkout', priceKey)
                 router.push('/login?redirect=/pricing')
                 return
@@ -39,9 +51,7 @@ export default function PricingPage() {
 
             const response = await fetch('/api/stripe/checkout', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ priceKey }),
             })
 
@@ -56,174 +66,196 @@ export default function PricingPage() {
         } catch (error) {
             console.error('Checkout error:', error)
             alert('An unexpected error occurred.')
-        } finally {
-            setLoadingKey(null)
         }
     }
 
-    const PricingCard = ({ title, price, interval, description, features, priceKey, popular, gradient }: PricingCardProps) => (
-        <div className={cn(
-            "relative p-8 rounded-3xl border transition-all duration-300 hover:shadow-xl flex flex-col h-full bg-white/80 backdrop-blur-xl",
-            popular ? "border-blue-500 shadow-blue-200 ring-2 ring-blue-500/20" : "border-slate-200 hover:border-slate-300"
-        )}>
-            {popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold uppercase tracking-wider rounded-full shadow-lg shadow-blue-500/30">
-                    Best Value
-                </div>
-            )}
-
-            <div className="mb-6">
-                <h3 className="text-xl font-bold text-slate-800 mb-2">{title}</h3>
-                <p className="text-slate-500 text-sm h-10">{description}</p>
-            </div>
-
-            <div className="mb-8">
-                <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-slate-900">{price}</span>
-                    {interval && <span className="text-slate-500 font-medium">/{interval}</span>}
-                </div>
-            </div>
-
-            <ul className="space-y-4 mb-8 flex-1">
-                {features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
-                        <div className={cn("mt-0.5 p-0.5 rounded-full", popular ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500")}>
-                            <Check className="w-3 h-3" strokeWidth={3} />
-                        </div>
-                        {feature}
-                    </li>
-                ))}
-            </ul>
-
-            <button
-                onClick={() => handleCheckout(priceKey)}
-                disabled={loadingKey !== null}
-                className={cn(
-                    "w-full py-4 px-6 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2",
-                    popular
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40"
-                        : "bg-slate-100 hover:bg-slate-200 text-slate-900"
-                )}
-            >
-                {loadingKey === priceKey ? (
-                    <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Processing...
-                    </>
-                ) : (
-                    <>
-                        {interval ? "Subscribe Now" : "Buy Now"}
-                        {!interval && <Zap className="w-4 h-4" />}
-                    </>
-                )}
-            </button>
-        </div>
-    )
-
     return (
-        <main className="min-h-screen bg-slate-50 relative overflow-hidden">
-            {/* Background Decorations */}
-            <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-100/50 rounded-full blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-100/50 rounded-full blur-3xl" />
-            </div>
-
+        <main className="min-h-screen bg-slate-50 relative overflow-x-hidden">
             {/* Navigation */}
-            <div className="relative z-10 p-6">
+            <div className="relative z-10 p-6 max-w-2xl mx-auto w-full">
                 <Link href="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors font-medium">
                     <ArrowLeft className="w-4 h-4" />
                     Back to Home
                 </Link>
             </div>
 
-            <div className="relative z-10 container mx-auto px-4 py-8 pb-20">
-                <div className="text-center max-w-2xl mx-auto mb-16">
-                    <div className="inline-flex items-center justify-center p-2 bg-blue-50 rounded-2xl mb-6">
-                        <Heart className="w-8 h-8 text-red-500 fill-red-500 animate-pulse" />
-                    </div>
-                    <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-6 tracking-tight">
-                        Playing Is Better Without Limits
+            <div className="relative z-10 container mx-auto px-4 pb-12 max-w-md">
+
+                {/* Header Section */}
+                <div className="text-center mb-6">
+                    <h1 className="text-3xl md:text-4xl font-black text-slate-900 mb-2 tracking-tight leading-tight">
+                        Playing Is Better <span className="text-[#4e46e5]">Without Limits</span>
                     </h1>
-                    <p className="text-lg text-slate-600">
-                        Never wait for hearts again. Unlock unlimited gameplay and master geography faster with Premium.
+                    <p className="text-slate-600 font-medium">
+                        Never wait for hearts again. Unlock unlimited gameplay and master geography faster.
                     </p>
                 </div>
 
-                {/* Subscriptions Grid */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-                    {/* Monthly */}
-                    <PricingCard
-                        title="Premium Monthly"
-                        price="$4.99"
-                        interval="mo"
-                        description="Flexible monthly billing. Cancel anytime."
-                        priceKey="PREMIUM_MONTHLY"
-                        features={[
-                            "Unlimited Hearts ❤️",
-                            "No Ads",
-                            "Premium Leaderboard Badge",
-                            "Support Development"
-                        ]}
-                    />
-
-                    {/* Yearly */}
-                    <PricingCard
-                        title="Premium Yearly"
-                        price="$49.99"
-                        interval="yr"
-                        priceKey="PREMIUM_YEARLY"
-                        description="Commit to mastery. Save ~17% compared to monthly."
-                        popular={true}
-                        features={[
-                            "Unlimited Hearts ❤️",
-                            "No Ads",
-                            "Premium Leaderboard Badge",
-                            "Priority Support",
-                            "2 Months Free"
-                        ]}
-                    />
-
-                    {/* Heart Pack 5 */}
-                    <PricingCard
-                        title="Starter Pack"
-                        price="$0.99"
-                        description="Quick refill for casual players."
-                        priceKey="HEART_PACK_5"
-                        features={[
-                            "Get 5 Extra Hearts",
-                            "Use anytime",
-                            "Never expires"
-                        ]}
-                    />
-
-                    {/* Heart Pack 20 */}
-                    <PricingCard
-                        title="Pro Pack"
-                        price="$2.99"
-                        description="Best value for heart refills."
-                        priceKey="HEART_PACK_20"
-                        features={[
-                            "Get 20 Extra Hearts",
-                            "Use anytime",
-                            "Never expires",
-                            "Save 25%"
-                        ]}
-                    />
+                {/* URGENCY BAR */}
+                <div className="bg-[#ef4444] text-white py-3 px-6 rounded-xl flex items-center justify-between shadow-lg shadow-red-500/20 mb-8 transform hover:scale-[1.02] transition-transform">
+                    <span className="text-sm font-bold uppercase tracking-wider">OFFER ENDS IN</span>
+                    <span className="font-mono font-black text-xl tabular-nums">
+                        {String(t.minutes).padStart(2, '0')} : {String(t.seconds).padStart(2, '0')}
+                    </span>
                 </div>
 
-                {/* FAQ / Trust Section */}
-                <div className="mt-20 text-center max-w-xl mx-auto space-y-8">
-                    <div className="flex items-center justify-center gap-8 opacity-60 grayscale">
-                        <div className="flex items-center gap-2 font-bold text-slate-400">
-                            <span className="text-2xl">🔒</span> Secure Payment
+                {/* PLAN SELECTION */}
+                <div className="space-y-4 mb-8">
+                    {/* Starter (Heart Pack) */}
+                    <div
+                        onClick={() => setSelectedPlan('starter')}
+                        className={cn(
+                            "relative border-2 rounded-2xl p-4 cursor-pointer transition-all flex items-center gap-4 bg-white shadow-sm",
+                            selectedPlan === 'starter'
+                                ? "border-[#4e46e5] ring-1 ring-[#4e46e5] shadow-[#4e46e5]/10 z-10"
+                                : "border-slate-200 hover:border-slate-300 hover:shadow-md"
+                        )}
+                    >
+                        <div className={cn(
+                            "w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+                            selectedPlan === 'starter' ? "border-[#4e46e5]" : "border-slate-300"
+                        )}>
+                            {selectedPlan === 'starter' && <div className="w-3 h-3 rounded-full bg-[#4e46e5]" />}
                         </div>
-                        <div className="flex items-center gap-2 font-bold text-slate-400">
-                            <span className="text-2xl">⚡</span> Powered by Stripe
+
+                        <div className="flex-1">
+                            <div className="font-bold text-slate-800 text-sm uppercase tracking-wide">Starter Pack</div>
+                            <div className="text-xs text-slate-400">20 Hearts • One-time purchase</div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <div className="bg-slate-100 rounded-lg px-3 py-2 text-center min-w-[80px]">
+                                <div className="text-xl font-black text-slate-700 leading-none">$2.99</div>
+                            </div>
                         </div>
                     </div>
-                    <p className="text-slate-400 text-sm">
-                        Prices may vary by region. Subscriptions auto-renew but can be cancelled at any time from your dashboard.
+
+                    {/* Monthly (Most Popular) */}
+                    <div className="relative group pt-4">
+                        <div className="absolute top-0 left-0 right-0 h-6 bg-[#4e46e5] rounded-t-xl z-0 flex items-center justify-center -mt-0.5">
+                            <div className="flex items-center gap-1 text-[10px] font-black text-white uppercase tracking-widest pt-0.5">
+                                <Star className="w-3 h-3 fill-white" />
+                                Most Popular
+                            </div>
+                        </div>
+                        <div
+                            onClick={() => setSelectedPlan('monthly')}
+                            className={cn(
+                                "relative border-2 rounded-2xl rounded-t-xl p-4 cursor-pointer transition-all flex items-center gap-4 bg-white shadow-sm z-10",
+                                selectedPlan === 'monthly'
+                                    ? "border-[#4e46e5] ring-1 ring-[#4e46e5] shadow-lg shadow-[#4e46e5]/10"
+                                    : "border-slate-200 hover:border-slate-300 hover:shadow-md"
+                            )}
+                        >
+                            <div className={cn(
+                                "w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+                                selectedPlan === 'monthly' ? "border-[#4e46e5]" : "border-slate-300"
+                            )}>
+                                {selectedPlan === 'monthly' && <div className="w-3 h-3 rounded-full bg-[#4e46e5]" />}
+                            </div>
+
+                            <div className="flex-1">
+                                <div className="font-bold text-slate-800 text-sm uppercase tracking-wide">Monthly Plan</div>
+                                <div className="text-xs text-slate-400">$4.99 billed monthly</div>
+                            </div>
+
+                            <div className="bg-slate-100 rounded-lg px-3 py-1 text-center min-w-[80px]">
+                                <div className="text-xl font-black text-slate-700 leading-none flex items-start justify-center">
+                                    <span className="text-xs mt-1">$</span>
+                                    0<span className="text-sm mt-1">.16</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-bold uppercase">per day</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Yearly (Best Offer) */}
+                    <div className="relative group pt-4">
+                        <div className="absolute top-0 left-0 right-0 h-6 bg-slate-200 rounded-t-xl z-0 flex items-center justify-center -mt-0.5">
+                            <div className="flex items-center gap-1 text-[10px] font-black text-slate-500 uppercase tracking-widest pt-0.5">
+                                Best Offer
+                            </div>
+                        </div>
+                        <div
+                            onClick={() => setSelectedPlan('yearly')}
+                            className={cn(
+                                "relative border-2 rounded-2xl rounded-t-xl p-4 cursor-pointer transition-all flex items-center gap-4 bg-white shadow-sm z-10",
+                                selectedPlan === 'yearly'
+                                    ? "border-[#4e46e5] ring-1 ring-[#4e46e5] shadow-lg shadow-[#4e46e5]/10"
+                                    : "border-slate-200 hover:border-slate-300 hover:shadow-md"
+                            )}
+                        >
+                            <div className={cn(
+                                "w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+                                selectedPlan === 'yearly' ? "border-[#4e46e5]" : "border-slate-300"
+                            )}>
+                                {selectedPlan === 'yearly' && <div className="w-3 h-3 rounded-full bg-[#4e46e5]" />}
+                            </div>
+
+                            <div className="flex-1">
+                                <div className="font-bold text-slate-800 text-sm uppercase tracking-wide">Yearly Plan</div>
+                                <div className="text-xs text-slate-400">$49.99 billed yearly</div>
+                            </div>
+
+                            <div className="bg-slate-100 rounded-lg px-3 py-1 text-center min-w-[80px]">
+                                <div className="text-xl font-black text-slate-700 leading-none flex items-start justify-center">
+                                    <span className="text-xs mt-1">$</span>
+                                    0<span className="text-sm mt-1">.13</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-bold uppercase">per day</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Features List */}
+                <div className="grid grid-cols-2 gap-3 mb-8 px-2">
+                    {[
+                        "Unlimited Hearts",
+                        "Unlock All Regions",
+                        "No Ads",
+                        "Golden Name",
+                        "Support Development"
+                    ].map((feature, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                            <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-green-600 flex-shrink-0">
+                                <Check className="w-3 h-3" strokeWidth={3} />
+                            </div>
+                            {feature}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Footer Actions */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-center gap-2 text-[#059669]">
+                        <div className="bg-[#d1fae5] p-1 rounded-full">
+                            <ShieldCheck className="w-5 h-5 fill-[#059669] text-white" />
+                        </div>
+                        <span className="text-sm font-bold underline decoration-2 decoration-[#059669]/30">30-day money-back guarantee</span>
+                    </div>
+
+                    <Button
+                        size="lg"
+                        className="w-full h-14 text-xl font-black rounded-full shadow-xl shadow-[#4e46e5]/30 bg-[#4e46e5] hover:bg-[#4338ca] transition-all hover:scale-[1.02] active:scale-95"
+                        onClick={handleCheckout}
+                    >
+                        CONTINUE
+                    </Button>
+
+                    <p className="text-xs text-center text-slate-400 leading-relaxed px-4">
+                        By continuing, you agree to the Terms & Conditions. Subscription auto-renews. Cancel anytime.
                     </p>
+                </div>
+
+                {/* Trust Badges */}
+                <div className="mt-12 flex items-center justify-center gap-8 opacity-40 grayscale pb-8">
+                    <div className="flex items-center gap-2 font-bold text-slate-800">
+                        <span className="text-xl">🔒</span> Secure Payment
+                    </div>
+                    <div className="flex items-center gap-2 font-bold text-slate-800">
+                        <span className="text-xl">⚡</span> Powered by Stripe
+                    </div>
                 </div>
             </div>
         </main>
