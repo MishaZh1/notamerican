@@ -28,7 +28,7 @@ async function getGuestId() {
  * Get hearts and subscription status for current game
  */
 export async function getHeartsForCurrentGame(userId: string | null) {
-    const supabase = createClient()
+    const supabase = await createClient()
     const cookieStore = await cookies()
 
     let isPremium = false
@@ -142,7 +142,7 @@ export async function getHeartsForCurrentGame(userId: string | null) {
  * Start Game / Deduct Heart
  */
 export async function incrementGamesPlayed(userId: string | null, mode: 'ranked' | 'practice' = 'ranked') {
-    const supabase = createClient()
+    const supabase = await createClient()
     const cookieStore = await cookies()
     let targetId = userId
     let tableName = 'users' as 'users' | 'anonymous_users'
@@ -198,7 +198,7 @@ export async function incrementGamesPlayed(userId: string | null, mode: 'ranked'
  * Pack Purchase
  */
 export async function useHeartPack(userId: string) {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { data: user } = await supabase.from('users').select('heart_packs_owned, hearts').eq('id', userId).single()
 
     if (!user || user.heart_packs_owned < 1) return { success: false, error: 'No packs' }
@@ -233,7 +233,7 @@ export async function recordTransaction(
     stripePaymentId: string,
     stripeSessionId?: string
 ) {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     const { data, error } = await supabase
         .from('transactions')

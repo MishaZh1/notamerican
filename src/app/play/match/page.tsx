@@ -40,11 +40,7 @@ export default function MatchPage() {
             // 1. Check if can play (Hearts/Daily Limit)
             const playStatus = await canPlayGame(user?.id || null)
 
-            if (!playStatus.canPlay && playStatus.reason === 'daily_limit_reached') {
-                setModalType('OUT_OF_HEARTS')
-                setTimeRemaining(playStatus.timeRemaining || 0)
-                setShowPremiumModal(true)
-            } else if (!playStatus.canPlay && playStatus.reason === 'out_of_hearts') {
+            if (!playStatus.canPlay && playStatus.reason === 'out_of_hearts') {
                 setModalType('OUT_OF_HEARTS')
                 setShowPremiumModal(true)
             }

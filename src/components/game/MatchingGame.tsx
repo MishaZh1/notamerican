@@ -5,7 +5,7 @@ import { motion, AnimatePresence, Variants } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Trophy, Timer, Flame, Zap, Sparkles } from "lucide-react"
+import { Trophy, Timer, Flame, Zap, Sparkles, Loader2 } from "lucide-react"
 
 // =============================================================================
 // TYPES
@@ -326,7 +326,7 @@ function gameReducer(state: GameState, action: Action): GameState {
 // COMPONENT
 // =============================================================================
 
-export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: MatchingGameProps) {
+export function MatchingGame({ pairs, onComplete, passports, onWrongMatch, onStartGame }: MatchingGameProps) {
     const [state, dispatch] = useReducer(gameReducer, {
         phase: 'INTRO',
         cards: [],
