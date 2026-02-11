@@ -11,7 +11,7 @@ const REGEN_TIME_MS = 2 * 60 * 60 * 1000 // 2 hours
  * Helper to get or create guest ID
  */
 async function getGuestId() {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const guestId = cookieStore.get('guest_id')?.value
 
     if (!guestId) {
@@ -29,7 +29,7 @@ async function getGuestId() {
  */
 export async function getHeartsForCurrentGame(userId: string | null) {
     const supabase = createClient()
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
 
     let isPremium = false
     let hearts = MAX_HEARTS
@@ -143,7 +143,7 @@ export async function getHeartsForCurrentGame(userId: string | null) {
  */
 export async function incrementGamesPlayed(userId: string | null, mode: 'ranked' | 'practice' = 'ranked') {
     const supabase = createClient()
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     let targetId = userId
     let tableName = 'users' as 'users' | 'anonymous_users'
     let idColumn = 'id'
