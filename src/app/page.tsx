@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client"
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [buildInfo, setBuildInfo] = useState<string>('')
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -16,6 +17,17 @@ export default function Home() {
       setIsAuthenticated(!!user)
     }
     checkAuth()
+
+    // Get build info from environment or generate timestamp
+    const buildId = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 'dev'
+    const buildTime = new Date().toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })
+    setBuildInfo(`${buildId} • ${buildTime}`)
   }, [])
 
   return (
@@ -85,9 +97,9 @@ export default function Home() {
           </button>
         </Link>
 
-        {/* Version Number */}
+        {/* Version Number - Dynamic */}
         <div className="text-center mt-4">
-          <p className="text-xs text-slate-400">v1.0.4</p>
+          <p className="text-xs text-slate-400 font-mono">{buildInfo || 'Loading...'}</p>
         </div>
       </div>
     </main>
