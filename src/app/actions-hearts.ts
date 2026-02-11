@@ -221,3 +221,39 @@ export async function canPlayGame(userId: string | null) {
         hearts
     }
 }
+// ... (existing exports)
+
+/**
+ * Record a transaction
+ */
+export async function recordTransaction(
+    userId: string,
+    type: 'subscription_monthly' | 'subscription_yearly' | 'heart_pack_5' | 'heart_pack_20',
+    amountCents: number,
+    stripePaymentId: string,
+    stripeSessionId?: string
+) {
+    const supabase = createClient()
+
+    const { data, error } = await supabase
+        .from('transactions')
+        .insert({
+            user_id: userId,
+            type,
+            amount_cents: amountCents,
+            stripe_payment_id: stripePaymentId,
+            stripe_session_id: stripeSessionId,
+            status: 'completed'
+        })
+        .select()
+        .single()
+
+    if (error) {
+        console.error('Error recording transaction:', error)
+        return { success: false, error: error.message }
+    }
+
+    return { success: true, transaction: data }
+}
+
+export const startGame = incrementGamesPlayed
