@@ -76,6 +76,7 @@ interface MatchingGameProps {
     onComplete?: (stats: GameStats) => void
     passports?: number // For flags game compatibility
     onWrongMatch?: () => void
+    onStartGame?: () => Promise<boolean>
 }
 
 const TOTAL_CARDS = 10
@@ -604,7 +605,22 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
     }
 
     // RENDER: Intro
+    const [isStarting, setIsStarting] = useState(false)
+
     if (state.phase === 'INTRO') {
+        const handleStart = async () => {
+            setIsStarting(true)
+            if (onStartGame) {
+                const canStart = await onStartGame()
+                if (canStart) {
+                    dispatch({ type: 'START_PLAYING' })
+                }
+            } else {
+                dispatch({ type: 'START_PLAYING' })
+            }
+            setIsStarting(false)
+        }
+
         return (
             <div className="flex flex-col items-center justify-center min-h-[50vh] gap-6 text-center p-6 animate-in fade-in zoom-in duration-300">
                 <div className="bg-primary/10 p-6 rounded-full">
@@ -616,10 +632,12 @@ export function MatchingGame({ pairs, onComplete, passports, onWrongMatch }: Mat
                 </div>
                 <Button
                     size="lg"
+                    disabled={isStarting}
                     className="w-full max-w-xs font-black text-lg h-14 rounded-xl shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
-                    onClick={() => dispatch({ type: 'START_PLAYING' })}
+                    onClick={handleStart}
                 >
-                    START GAME
+                    {isStarting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+                    {isStarting ? "Checking Hearts..." : "START GAME"}
                 </Button>
             </div>
         )
