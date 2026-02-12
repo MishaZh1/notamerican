@@ -18,16 +18,14 @@ export default function Home() {
     }
     checkAuth()
 
-    // Get build info from environment or generate timestamp
-    const buildId = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 'dev'
-    const buildTime = new Date().toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    })
-    setBuildInfo(`${buildId} • ${buildTime}`)
+    // Generate semantic version: v1.0.xxxx
+    // Patch number is auto-generated from build time for uniqueness
+    const now = new Date()
+    const buildNumber = (now.getMonth() + 1).toString().padStart(2, '0') +
+      now.getDate().toString().padStart(2, '0') +
+      now.getHours().toString().padStart(2, '0') +
+      now.getMinutes().toString().padStart(2, '0')
+    setBuildInfo(`v1.0.${buildNumber}`)
   }, [])
 
   return (
@@ -99,7 +97,7 @@ export default function Home() {
 
         {/* Version Number - Dynamic */}
         <div className="text-center mt-4">
-          <p className="text-xs text-slate-400 font-mono">{buildInfo || 'Loading...'}</p>
+          <p className="text-xs text-slate-400">{buildInfo || 'Loading...'}</p>
         </div>
       </div>
     </main>
