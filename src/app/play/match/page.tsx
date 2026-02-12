@@ -155,7 +155,7 @@ export default function MatchPage() {
     }
 
     return (
-        <main className="min-h-screen p-4 bg-background flex flex-col">
+        <main className="min-h-screen p-4 bg-background flex flex-col pb-20">
             <PremiumModal
                 isOpen={showPremiumModal}
                 onClose={() => setShowPremiumModal(false)}

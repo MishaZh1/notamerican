@@ -90,7 +90,7 @@ export default function LoginPage() {
     }
 
     return (
-        <main className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
+        <main className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative">
             {/* Animated Background Elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl animate-pulse" />
@@ -103,7 +103,7 @@ export default function LoginPage() {
                     <Link href="/" className="inline-block">
                         <div className="relative w-64 h-20 mx-auto mb-4">
                             <Image
-                                src="/logo.png"
+                                src="/logo-v5-official.svg"
                                 alt="Nota Merican"
                                 fill
                                 className="object-contain"

@@ -88,3 +88,32 @@ A stern human border patrol officer in a high-contrast 2D noir style. Marco has 
 - **Wrong Answer**: Soft, low-pitched "boop".
 - **Level Up**: Short orchestral crescendo.
 - **Streak Flame**: A subtle "whoosh" sound.
+
+---
+
+## 🛂 Passport Design System (New Proposal)
+This is the new "Passport Edition" visual identity, designed for a more official yet gamified feel.
+
+### Color Palette
+- **Primary (Approved)**: `#2E7D32` (Deep Official Green) - Used for success, play buttons, and approved stamps.
+- **Secondary (Authority)**: `#283593` (Border Patrol Blue) - Used for headers, uniforms, and official UI.
+- **Accent (Visa)**: `#FBC02D` (Gold) - Used for stars, ranks, and premium highlights.
+- **Destructive (Denied)**: `#D32F2F` (Red) - Used for "Denied" stamps and errors.
+- **Background**: subtle off-white/blue tint to resemble official documents.
+
+### Mascot: Agent Marco v2
+- **Description**: Stern, no-nonsense border patrol officer.
+- **Props**: Holds a massive red "DENIED" stamp and a green "APPROVED" stamp.
+- **Vibe**: "Papers, Please" meets Duolingo.
+
+### Logos
+- **Main Logo (Default)**: Minimalist "Passport + Text" (v3).
+- **Options**:
+    - `logo-v2.png`: Circular Passport Stamp style.
+    - `logo-v3.png`: Minimalist Passport Book + Text.
+    - `logo-v4.png`: **Open Passport** showing a world map inside.
+    - `logo-v5.png`: **Playful Passport** with a paper plane (Blue/Green Original).
+    - `logo-v5-sunset.svg`: Sunset Orange/Gold Vector.
+    - `logo-v5-neon.svg`: Neon Purple/Cyan Vector.
+    - `logo-v5-teal.svg`: Teal/Coral Vector.
+    - `logo-v6.png`: **Official Badge** style with gold accents and checkmark.

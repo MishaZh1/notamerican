@@ -74,51 +74,65 @@
     --popover: 0 0% 100%;
     --popover-foreground: 224 71.4% 4.1%;
 
-    /* DUOLINGO COLORS */
-    --primary: 142 71% 45%;
-    /* #58CC02 - Green */
-    --primary-depth: 142 76% 36%;
+    /* --- PASSPORT DESIGN SYSTEM (FINAL) --- */
+
+    /* Primary: Official Green (Success/Action) - Matches Logo Text & Plane Tail */
+    /* #2E7D32 */
+    --primary: 123 46% 34%;
+    --primary-depth: 123 50% 25%;
+    /* Darker for 3D effect */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 199 89% 48%;
-    /* #1CB0F6 - Blue */
-    --secondary-depth: 199 89% 38%;
+    /* Secondary: Passport Blue (Brand/Headers) - Matches Logo Cover */
+    /* #1565C0 */
+    --secondary: 212 80% 42%;
+    --secondary-depth: 212 80% 32%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220.9 39.3% 11%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 142 71% 45%;
+    /* Accent: Visa Gold (Stars/Highlights) */
+    /* #FBC02D */
+    --accent: 43 96% 58%;
+    --accent-foreground: 212 80% 20%;
+
+    /* Destructive: Denied Red */
+    /* #D32F2F */
+    --destructive: 0 65% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 212 80% 42%;
+    /* Focus ring is now Blue */
     --radius: 1rem;
   }
 
-  /* FORCING LIGHT MODE STYLE EVEN IN DARK MODE PREF FOR MVP CONSISTENCY */
   .dark {
-    --background: 224 71.4% 4.1%;
-    /* Keep dark bg option but elements will pop */
-    --foreground: 210 20% 98%;
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 210 20% 98%;
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 142 71% 45%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 199 89% 48%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
-    --accent: 215 27.9% 16.9%;
-    --accent-foreground: 210 20% 98%;
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 10%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Keep brand colors consistent but readable */
+    --primary: 123 46% 34%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 212 80% 50%;
+    /* Slightly lighter blue for dark mode */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 43 96% 58%;
+    --accent-foreground: 212 80% 20%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
-    --ring: 142 71% 45%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212 80% 50%;
   }
 }
 
@@ -132,17 +146,25 @@
   }
 }
 
-/* DUOLINGO BUTTON STYLES */
+/* 3D BUTTON UTILITIES - PASSPORT STYLE */
 @layer utilities {
   .btn-3d-primary {
-    @apply bg-[hsl(var(--primary))] border-b-4 border-[hsl(var(--primary-depth))] active:border-b-0 active:translate-y-1 transition-all text-white font-black uppercase rounded-2xl tracking-wide shadow-sm hover:brightness-110;
+    @apply bg-[hsl(var(--primary))] border-b-4 border-[hsl(var(--primary-depth))] active:border-b-0 active:translate-y-1 transition-all text-white font-black uppercase rounded-2xl tracking-wide shadow-lg hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .btn-3d-secondary {
-    @apply bg-[hsl(var(--secondary))] border-b-4 border-[hsl(var(--secondary-depth))] active:border-b-0 active:translate-y-1 transition-all text-white font-black uppercase rounded-2xl tracking-wide shadow-sm hover:brightness-110;
+    @apply bg-[hsl(var(--secondary))] border-b-4 border-[hsl(var(--secondary-depth))] active:border-b-0 active:translate-y-1 transition-all text-white font-black uppercase rounded-2xl tracking-wide shadow-lg hover:brightness-110 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-3d-accent {
+    @apply bg-[hsl(var(--accent))] border-b-4 border-yellow-600 text-[hsl(var(--accent-foreground))] active:border-b-0 active:translate-y-1 transition-all font-black uppercase rounded-2xl tracking-wide shadow-lg hover:brightness-110;
   }
 
   .btn-3d-outline {
-    @apply bg-white border-2 border-slate-200 border-b-4 border-b-slate-300 text-slate-500 active:border-b-2 active:translate-y-1 transition-all font-bold uppercase rounded-2xl tracking-wide hover:bg-slate-50;
+    @apply bg-white border-2 border-slate-200 border-b-4 border-b-slate-300 text-slate-500 active:border-b-2 active:translate-y-1 transition-all font-bold uppercase rounded-2xl tracking-wide hover:bg-slate-50 hover:border-slate-300;
+  }
+
+  .btn-3d-danger {
+    @apply bg-[hsl(var(--destructive))] border-b-4 border-red-800 text-white active:border-b-0 active:translate-y-1 transition-all font-bold uppercase rounded-2xl tracking-wide shadow-lg hover:brightness-110;
   }
 }

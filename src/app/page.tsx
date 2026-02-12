@@ -29,7 +29,7 @@ export default function Home() {
   }, [])
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-6 bg-gradient-to-b from-slate-50 to-white max-w-md mx-auto">
+    <main className="flex min-h-screen flex-col items-center justify-between p-6 bg-gradient-to-b from-blue-50/50 to-background max-w-md mx-auto">
 
       {/* Top Bar - Login/Dashboard Link */}
       <div className="w-full flex justify-end py-4 px-2 min-h-[40px]">
@@ -55,8 +55,8 @@ export default function Home() {
         {/* Logo - Centered and Bigger */}
         <div className="relative w-96 h-32">
           <Image
-            src="/logo.png"
-            alt="Nota Merican"
+            src="/logo-v5-official.svg"
+            alt="Nota Merican - Official"
             fill
             className="object-contain"
             priority
@@ -66,8 +66,8 @@ export default function Home() {
         {/* 3D Mascot Image */}
         <div className="relative w-52 h-52 mx-auto animate-bounce-slow rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white/80">
           <Image
-            src="/mascot-new.png"
-            alt="Agent Marco - Nota Merican Mascot"
+            src="/mascot-marco-v2.png"
+            alt="Agent Marco - The Enforcer"
             fill
             className="object-cover"
             priority

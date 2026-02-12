@@ -86,7 +86,7 @@ export default function DashboardClient({ user, profile, sessions }: DashboardCl
                     <Link href="/">
                         <div className="relative w-40 h-10">
                             <Image
-                                src="/logo.png"
+                                src="/logo-v5-official.svg"
                                 alt="Nota Merican"
                                 fill
                                 className="object-contain"
@@ -106,8 +106,8 @@ export default function DashboardClient({ user, profile, sessions }: DashboardCl
                 <div className="grid lg:grid-cols-3 gap-6">
                     {/* LEFT COLUMN: Profile & Stats */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Profile Hero */}
-                        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+                        {/* Profile Hero - PASSPORT STYLE BLUE */}
+                        <div className="bg-gradient-to-br from-[#1565C0] to-[#0D47A1] rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
 
                             <div className="flex flex-col sm:flex-row items-center gap-6 relative z-10">

@@ -62,7 +62,7 @@ export default function FlagsPage() {
     }
 
     return (
-        <main className="min-h-screen p-4 bg-background flex flex-col">
+        <main className="min-h-screen p-4 bg-background flex flex-col pb-20">
             <div className="flex justify-between items-center mb-4">
                 <Button variant="ghost" size="sm" onClick={() => router.push('/')}>Quit</Button>
                 <h1 className="font-black text-xl text-primary">Flags</h1>

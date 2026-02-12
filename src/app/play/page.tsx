@@ -272,7 +272,7 @@ export default function PlayPage() {
     const progress = ((currentIndex) / questions.length) * 100
 
     return (
-        <main className="min-h-screen bg-background text-foreground flex flex-col max-w-md mx-auto relative overflow-hidden">
+        <main className="min-h-screen bg-background text-foreground flex flex-col max-w-md mx-auto relative">
 
             {/* Top Bar */}
             <div className="p-4 flex items-center gap-4">
